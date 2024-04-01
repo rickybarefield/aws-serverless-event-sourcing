@@ -1,0 +1,157 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "awscli2@latest": {
+      "last_modified": "2024-03-25T21:25:22Z",
+      "resolved": "github:NixOS/nixpkgs/07262b18b97000d16a4bdb003418bd2fb067a932#awscli2",
+      "source": "devbox-search",
+      "version": "2.15.32",
+      "systems": {
+        "aarch64-darwin": {
+          "store_path": "/nix/store/z9zmm6sfrnj4md7i2xwi0rmanqig1pr1-awscli2-2.15.32"
+        },
+        "aarch64-linux": {
+          "store_path": "/nix/store/gl6b818xrg5syvzw683nhpf6im6km5d2-awscli2-2.15.32"
+        },
+        "x86_64-darwin": {
+          "store_path": "/nix/store/zwjhyr8kqna43l12y3kamx7lx94kpk9h-awscli2-2.15.32"
+        },
+        "x86_64-linux": {
+          "store_path": "/nix/store/k8g2inndsrzg55sz6v0nh8i8wfhgzd6y-awscli2-2.15.32"
+        }
+      }
+    },
+    "jdk@21+35": {
+      "last_modified": "2024-03-22T11:26:23Z",
+      "resolved": "github:NixOS/nixpkgs/a3ed7406349a9335cb4c2a71369b697cecd9d351#jdk",
+      "source": "devbox-search",
+      "version": "21+35",
+      "systems": {
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/8887zd03gyis7dsz8fwnlcrgp2mkgprl-openjdk-21+35",
+              "default": true
+            },
+            {
+              "name": "debug",
+              "path": "/nix/store/d9lj3r0fdn5r3mp08f8zz5ybn8dbp57n-openjdk-21+35-debug"
+            }
+          ],
+          "store_path": "/nix/store/8887zd03gyis7dsz8fwnlcrgp2mkgprl-openjdk-21+35"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/z8vw8741qs89v0fslnyddrjg2nlmzamj-openjdk-21+35",
+              "default": true
+            },
+            {
+              "name": "debug",
+              "path": "/nix/store/4p8gz23vvxpqqgi63fi5h535fmrs7ryg-openjdk-21+35-debug"
+            }
+          ],
+          "store_path": "/nix/store/z8vw8741qs89v0fslnyddrjg2nlmzamj-openjdk-21+35"
+        }
+      }
+    },
+    "jetbrains.idea-community@latest": {
+      "last_modified": "2024-03-25T12:46:37Z",
+      "resolved": "github:NixOS/nixpkgs/c726225724e681b3626acc941c6f95d2b0602087#jetbrains.idea-community",
+      "source": "devbox-search",
+      "version": "2023.3.5",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/p35s12c7xq6qsys8qy0w1lhp8k5iqaad-idea-community-2023.3.5",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/p35s12c7xq6qsys8qy0w1lhp8k5iqaad-idea-community-2023.3.5"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/fn9n19ld9i1aq2n002y1lx6r1zx7qmb8-idea-community-2023.3.5",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/fn9n19ld9i1aq2n002y1lx6r1zx7qmb8-idea-community-2023.3.5"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/8qz38kxzzi08l4m3bvw2175dwpsh9l27-idea-community-2023.3.5",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/8qz38kxzzi08l4m3bvw2175dwpsh9l27-idea-community-2023.3.5"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/v93iz44x3krf7drzd39jak96fi29cnf7-idea-community-2023.3.5",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/v93iz44x3krf7drzd39jak96fi29cnf7-idea-community-2023.3.5"
+        }
+      }
+    },
+    "maven@latest": {
+      "last_modified": "2024-03-22T11:26:23Z",
+      "resolved": "github:NixOS/nixpkgs/a3ed7406349a9335cb4c2a71369b697cecd9d351#maven",
+      "source": "devbox-search",
+      "version": "3.9.6",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/0nqg520l3i11hzkbb6ws6i6jkpaqdqp7-apache-maven-3.9.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/0nqg520l3i11hzkbb6ws6i6jkpaqdqp7-apache-maven-3.9.6"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/bjggvjn78xjazk370ynx2gy582rqgdf8-apache-maven-3.9.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/bjggvjn78xjazk370ynx2gy582rqgdf8-apache-maven-3.9.6"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/1mxga40yfvjvhsxr9z3hychg49f0gn95-apache-maven-3.9.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/1mxga40yfvjvhsxr9z3hychg49f0gn95-apache-maven-3.9.6"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ncvq15byzjpgvjq2mf7kxx89khx64ifn-apache-maven-3.9.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ncvq15byzjpgvjq2mf7kxx89khx64ifn-apache-maven-3.9.6"
+        }
+      }
+    }
+  }
+}
