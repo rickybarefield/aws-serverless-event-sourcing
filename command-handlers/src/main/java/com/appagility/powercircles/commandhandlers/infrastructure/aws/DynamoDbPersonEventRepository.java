@@ -17,7 +17,7 @@ import java.util.stream.StreamSupport;
 public class DynamoDbPersonEventRepository implements PersonEventRepository, PersonEventVisitor {
 
 
-    public static final String TABLE_NAME = "person";
+    public static final String TABLE_NAME = System.getenv("PERSON_TABLE_NAME");
     public static final String TYPE_KEY = "_type";
     public static final String PERSON_CREATED_EVENT_TYPE = "PersonCreatedEvent";
     public static final String ID_KEY = "id";

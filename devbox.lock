@@ -28,31 +28,9 @@
       "version": "21+35",
       "systems": {
         "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/8887zd03gyis7dsz8fwnlcrgp2mkgprl-openjdk-21+35",
-              "default": true
-            },
-            {
-              "name": "debug",
-              "path": "/nix/store/d9lj3r0fdn5r3mp08f8zz5ybn8dbp57n-openjdk-21+35-debug"
-            }
-          ],
           "store_path": "/nix/store/8887zd03gyis7dsz8fwnlcrgp2mkgprl-openjdk-21+35"
         },
         "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/z8vw8741qs89v0fslnyddrjg2nlmzamj-openjdk-21+35",
-              "default": true
-            },
-            {
-              "name": "debug",
-              "path": "/nix/store/4p8gz23vvxpqqgi63fi5h535fmrs7ryg-openjdk-21+35-debug"
-            }
-          ],
           "store_path": "/nix/store/z8vw8741qs89v0fslnyddrjg2nlmzamj-openjdk-21+35"
         }
       }
@@ -64,43 +42,15 @@
       "version": "2023.3.5",
       "systems": {
         "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/p35s12c7xq6qsys8qy0w1lhp8k5iqaad-idea-community-2023.3.5",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/p35s12c7xq6qsys8qy0w1lhp8k5iqaad-idea-community-2023.3.5"
         },
         "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/fn9n19ld9i1aq2n002y1lx6r1zx7qmb8-idea-community-2023.3.5",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/fn9n19ld9i1aq2n002y1lx6r1zx7qmb8-idea-community-2023.3.5"
         },
         "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/8qz38kxzzi08l4m3bvw2175dwpsh9l27-idea-community-2023.3.5",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/8qz38kxzzi08l4m3bvw2175dwpsh9l27-idea-community-2023.3.5"
         },
         "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/v93iz44x3krf7drzd39jak96fi29cnf7-idea-community-2023.3.5",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/v93iz44x3krf7drzd39jak96fi29cnf7-idea-community-2023.3.5"
         }
       }
@@ -112,43 +62,15 @@
       "version": "3.9.6",
       "systems": {
         "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/0nqg520l3i11hzkbb6ws6i6jkpaqdqp7-apache-maven-3.9.6",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/0nqg520l3i11hzkbb6ws6i6jkpaqdqp7-apache-maven-3.9.6"
         },
         "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/bjggvjn78xjazk370ynx2gy582rqgdf8-apache-maven-3.9.6",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/bjggvjn78xjazk370ynx2gy582rqgdf8-apache-maven-3.9.6"
         },
         "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/1mxga40yfvjvhsxr9z3hychg49f0gn95-apache-maven-3.9.6",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/1mxga40yfvjvhsxr9z3hychg49f0gn95-apache-maven-3.9.6"
         },
         "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/ncvq15byzjpgvjq2mf7kxx89khx64ifn-apache-maven-3.9.6",
-              "default": true
-            }
-          ],
           "store_path": "/nix/store/ncvq15byzjpgvjq2mf7kxx89khx64ifn-apache-maven-3.9.6"
         }
       }

@@ -17,6 +17,8 @@
         <encoding>UTF-8</encoding>
         <mainClass>com.appagility.powercircles.App</mainClass>
         <mainArgs/>
+        <command-handlers-version>1.0-SNAPSHOT</command-handlers-version>
+        <command-handlers-artifactId>power-circles-command-handlers</command-handlers-artifactId>
     </properties>
 
     <dependencies>
@@ -29,6 +31,12 @@
             <groupId>com.pulumi</groupId>
             <artifactId>aws</artifactId>
             <version>(6.0.2,6.99]</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>${command-handlers-artifactId}</artifactId>
+            <version>${command-handlers-version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -103,9 +111,9 @@
                         <configuration>
                             <artifactItems>
                                 <artifactItem>
-                                    <groupId>com.appagility.powercircles</groupId>
-                                    <artifactId>power-circles-command-handlers</artifactId>
-                                    <version>1.0-SNAPSHOT</version>
+                                    <groupId>${project.groupId}</groupId>
+                                    <artifactId>${command-handlers-artifactId}</artifactId>
+                                    <version>${command-handlers-version}</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.build.directory}/lambdas</outputDirectory>

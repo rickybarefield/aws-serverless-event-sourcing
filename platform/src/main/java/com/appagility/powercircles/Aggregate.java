@@ -13,10 +13,13 @@ import com.pulumi.aws.lambda.Function;
 import com.pulumi.aws.lambda.FunctionArgs;
 import com.pulumi.aws.lambda.Permission;
 import com.pulumi.aws.lambda.PermissionArgs;
+import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
 import lombok.Builder;
 import lombok.Singular;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 import static com.pulumi.codegen.internal.Serialization.*;
 
@@ -106,7 +109,11 @@ public class Aggregate {
                 .runtime("java21")
                 .handler("com.appagility.powercircles.commandhandlers.infrastructure.aws.PersonHandler::handleRequest")
                 .role(lambdaRole.arn())
-                .code(new FileArchive("/home/ricky/projects/crm/platform/target/lambdas/power-circles-command-handlers.jar"))
+                .code(new FileArchive("./target/lambdas/power-circles-command-handlers.jar"))
+                .timeout((int) Duration.ofMinutes(1).toSeconds())
+                .environment(table.name().applyValue(
+                        tableName -> FunctionEnvironmentArgs.builder()
+                                .variables(Map.of("PERSON_TABLE_NAME", tableName)).build()))
                 .build());
 
         var rule = new EventRule(name, new EventRuleArgs.Builder()
