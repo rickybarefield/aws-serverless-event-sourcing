@@ -14,6 +14,8 @@ import com.pulumi.aws.lambda.FunctionArgs;
 import com.pulumi.aws.lambda.Permission;
 import com.pulumi.aws.lambda.PermissionArgs;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
+import com.pulumi.aws.sqs.Queue;
+import com.pulumi.aws.sqs.QueueArgs;
 import lombok.Builder;
 import lombok.Singular;
 
@@ -35,22 +37,13 @@ public class Aggregate {
 
         var table = defineDynamoTable();
 
-        new EventBus(name + "-events");
+        defineEventBus();
 
-        var commandBus = new EventBus(name + "-commands");
+        var commandBus = defineCommandBus();
 
-        var roleForGatewayToConnectToBus = new Role("api-gateway-to-" + name + "-command-bus", new RoleArgs.Builder()
-                .assumeRolePolicy(serializeJson(
-                        jsonObject(
-                                jsonProperty("Version", "2012-10-17"),
-                                jsonProperty("Statement", jsonArray(jsonObject(
-                                        jsonProperty("Action", "sts:AssumeRole"),
-                                        jsonProperty("Effect", "Allow"),
-                                        jsonProperty("Principal", jsonObject(
-                                                jsonProperty("Service", "apigateway.amazonaws.com")
-                                        ))))))))
-                .managedPolicyArns("arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess")
-                .build());
+        var roleForGatewayToConnectToBus = defineRoleForGatewayToConnectToCommandBus();
+
+        defineQueueForCommandHandler();
 
         defineLamdbaAndConnectToLambda(table, commandBus);
 
@@ -72,6 +65,37 @@ public class Aggregate {
                 .rangeKey("sequenceNumber")
                 .billingMode("PAY_PER_REQUEST")
                 .build());
+    }
+
+
+    private EventBus defineEventBus() {
+        return new EventBus(name + "-events");
+    }
+
+    private EventBus defineCommandBus() {
+        return new EventBus(name + "-commands");
+    }
+
+    private Role defineRoleForGatewayToConnectToCommandBus() {
+
+        return new Role("api-gateway-to-" + name + "-command-bus", new RoleArgs.Builder()
+                .assumeRolePolicy(serializeJson(
+                        jsonObject(
+                                jsonProperty("Version", "2012-10-17"),
+                                jsonProperty("Statement", jsonArray(jsonObject(
+                                        jsonProperty("Action", "sts:AssumeRole"),
+                                        jsonProperty("Effect", "Allow"),
+                                        jsonProperty("Principal", jsonObject(
+                                                jsonProperty("Service", "apigateway.amazonaws.com")
+                                        ))))))))
+                .managedPolicyArns("arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess")
+                .build());
+    }
+
+
+    private void defineQueueForCommandHandler() {
+
+        new Queue(name + "-command-queue", new QueueArgs.Builder().fifoQueue(true).build());
     }
 
     private void defineLamdbaAndConnectToLambda(Table table, EventBus commandBus) {
