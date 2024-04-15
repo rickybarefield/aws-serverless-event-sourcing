@@ -17,7 +17,7 @@ public class Command {
         this.name = name;
     }
 
-    public void defineInfrastructure(Api apiGateway, Role roleForGatewayToConnectToBus, EventBus commandBus) {
+    public void defineRouteAndConnectToCommandBus(Api apiGateway, Role roleForGatewayToConnectToBus, EventBus commandBus) {
 
 
         var integration = new Integration(name, IntegrationArgs.builder()
