@@ -1,5 +1,6 @@
 package com.appagility.powercircles;
 
+import com.amazonaws.auth.policy.Statement;
 import com.pulumi.asset.FileArchive;
 import com.pulumi.aws.apigatewayv2.Api;
 import com.pulumi.aws.cloudwatch.*;
@@ -10,20 +11,23 @@ import com.pulumi.aws.dynamodb.inputs.TableAttributeArgs;
 import com.pulumi.aws.iam.*;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
-import com.pulumi.aws.iam.inputs.RoleInlinePolicyArgs;
+import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementConditionArgs;
+import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementPrincipalArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
 import com.pulumi.aws.lambda.*;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
 import com.pulumi.aws.sqs.Queue;
 import com.pulumi.aws.sqs.QueueArgs;
+import com.pulumi.aws.sqs.QueuePolicy;
+import com.pulumi.aws.sqs.QueuePolicyArgs;
+import com.pulumi.core.Output;
 import lombok.Builder;
 import lombok.Singular;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import static com.pulumi.codegen.internal.Serialization.*;
 
 @Builder
 public class Aggregate {
@@ -33,6 +37,8 @@ public class Aggregate {
 
     @Singular
     private List<Command> commands;
+    private String commandHandlerArtifactName;
+    private String commandHandlerName;
 
     public void defineInfrastructure(Api apiGateway) {
 
@@ -59,9 +65,9 @@ public class Aggregate {
                 commandBus));
     }
 
+
     private Table defineDynamoTable() {
 
-        //TODO Should probably just have content in JSON
         return new Table(name, new TableArgs.Builder()
                 .attributes(
                         new TableAttributeArgs.Builder().name("id").type("S").build(),
@@ -75,25 +81,21 @@ public class Aggregate {
 
 
     private EventBus defineEventBus() {
+
         return new EventBus(name + "-events");
     }
 
     private EventBus defineCommandBus() {
+
         return new EventBus(name + "-commands");
     }
 
     private Role defineRoleForGatewayToConnectToCommandBus() {
 
+        var assumeGatewayRolePolicyDocument = createAssumeRolePolicyDocument("apigateway.amazonaws.com");
+
         return new Role("api-gateway-to-" + name + "-command-bus", new RoleArgs.Builder()
-                .assumeRolePolicy(serializeJson(
-                        jsonObject(
-                                jsonProperty("Version", "2012-10-17"),
-                                jsonProperty("Statement", jsonArray(jsonObject(
-                                        jsonProperty("Action", "sts:AssumeRole"),
-                                        jsonProperty("Effect", "Allow"),
-                                        jsonProperty("Principal", jsonObject(
-                                                jsonProperty("Service", "apigateway.amazonaws.com")
-                                        ))))))))
+                .assumeRolePolicy(assumeGatewayRolePolicyDocument.applyValue(GetPolicyDocumentResult::json))
                 .managedPolicyArns("arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess")
                 .build());
     }
@@ -103,57 +105,61 @@ public class Aggregate {
 
         return new Queue(name + "-command-queue", new QueueArgs.Builder()
                 .fifoQueue(true)
+                .contentBasedDeduplication(true)
                 .visibilityTimeoutSeconds((int) LAMBDA_TIMEOUT.toSeconds()).build());
     }
 
     private Function defineLambda(Table table, Role lambdaRole) {
 
-        var executionLambda = new Function(name, FunctionArgs
+        return new Function(name, FunctionArgs
                 .builder()
                 .runtime("java21")
-                .handler("com.appagility.powercircles.commandhandlers.infrastructure.aws.PersonHandler::handleRequest")
+                .handler(commandHandlerName)
                 .role(lambdaRole.arn())
-                .code(new FileArchive("./target/lambdas/power-circles-command-handlers.jar"))
+                .code(new FileArchive("./target/lambdas/" + commandHandlerArtifactName))
                 .timeout((int) LAMBDA_TIMEOUT.toSeconds())
                 .environment(table.name().applyValue(
                         tableName -> FunctionEnvironmentArgs.builder()
                                 .variables(Map.of("PERSON_TABLE_NAME", tableName)).build()))
                 .build());
-
-        return executionLambda;
     }
 
     private static Role defineRoleForLambda(Table table) {
 
+        var allowAllOnDynamoForTablePolicyDocument = IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
+                .statements(table.arn().applyValue(tableArn -> Collections.singletonList(GetPolicyDocumentStatementArgs.builder()
+                        .effect("Allow")
+                        .actions("dynamodb:*")
+                        .resources(tableArn)
+                        .build())))
+                .build());
+
+        var allowAllOnDynamoForTablePolicy = policyForDocument(allowAllOnDynamoForTablePolicyDocument,
+                "allow_all_on_dynamodb");
+
+        var assumeLambdaRole = createAssumeRolePolicyDocument("lambda.amazonaws.com");
+
         return new Role("lambda-role", new RoleArgs.Builder()
-                .inlinePolicies(RoleInlinePolicyArgs.builder()
-                        .name("access_table")
-                        .policy(table.arn().applyValue(tableArn ->
-                                serializeJson(
-                                        jsonObject(
-                                                jsonProperty("Version", "2012-10-17"),
-                                                jsonProperty("Statement", jsonArray(jsonObject(
-                                                        jsonProperty("Action", jsonArray("dynamodb:*")),
-                                                        jsonProperty("Effect", "Allow"),
-                                                        jsonProperty("Resource", tableArn)
-                                                )))))
-                        ))
-                        .build())
-                .assumeRolePolicy(serializeJson(
-                        jsonObject(
-                                jsonProperty("Version", "2012-10-17"),
-                                jsonProperty("Statement", jsonArray(
-                                        jsonObject(
-                                                jsonProperty("Action", "sts:AssumeRole"),
-                                                jsonProperty("Effect", "Allow"),
-                                                jsonProperty("Principal", jsonObject(
-                                                        jsonProperty("Service", "lambda.amazonaws.com")
-                                                )))
-                                )))))
-                .managedPolicyArns("arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole")
+                .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
+                .managedPolicyArns(allowAllOnDynamoForTablePolicy.arn().applyValue(dynamoArn -> List.of(
+                        "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                        dynamoArn)))
                 .build());
     }
 
+    private static Output<GetPolicyDocumentResult> createAssumeRolePolicyDocument(String service) {
+
+        return IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
+                .statements(GetPolicyDocumentStatementArgs.builder()
+                        .effect("Allow")
+                        .actions("sts:AssumeRole")
+                        .principals(GetPolicyDocumentStatementPrincipalArgs.builder()
+                                .type("Service")
+                                .identifiers(service)
+                                .build())
+                        .build())
+                .build());
+    }
 
     private void defineConnectionBetween(EventBus commandBus, Queue commandHandlerQueue) {
 
@@ -170,6 +176,30 @@ public class Aggregate {
                 .rule(rule.name())
                 .eventBusName(commandBus.name())
                 .inputPath("$.detail")
+                .build());
+
+        var queuePolicyDocument = Output.all(commandHandlerQueue.arn(), rule.arn()).apply(queueArnAndRuleArn ->
+
+                IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
+                        .statements(GetPolicyDocumentStatementArgs.builder()
+                                .effect(Statement.Effect.Allow.name())
+                                .principals(GetPolicyDocumentStatementPrincipalArgs.builder()
+                                        .type("Service")
+                                        .identifiers("events.amazonaws.com")
+                                        .build())
+                                .actions("sqs:SendMessage")
+                                .resources(queueArnAndRuleArn.getFirst())
+                                .conditions(GetPolicyDocumentStatementConditionArgs.builder()
+                                        .test("ArnEquals")
+                                        .variable("aws:SourceArn")
+                                        .values(queueArnAndRuleArn.get(1))
+                                        .build())
+                                .build())
+                        .build()));
+
+        new QueuePolicy("allow_command_queue", QueuePolicyArgs.builder()
+                .queueUrl(commandHandlerQueue.url())
+                .policy(queuePolicyDocument.applyValue(GetPolicyDocumentResult::json))
                 .build());
     }
 
@@ -201,9 +231,7 @@ public class Aggregate {
 
                 .build());
 
-        var allowReceiveFromSqsPolicy = new Policy("receive_from_sqs", new PolicyArgs.Builder()
-                .policy(policyDocument.applyValue(GetPolicyDocumentResult::json))
-                .build());
+        var allowReceiveFromSqsPolicy = policyForDocument(policyDocument, "receive_from_sqs");
 
         new RolePolicyAttachment("receive_from_sqs_attachment", new RolePolicyAttachmentArgs.Builder()
                 .role(lambdaRole.name())
@@ -211,4 +239,10 @@ public class Aggregate {
                 .build());
     }
 
+    private static Policy policyForDocument(Output<GetPolicyDocumentResult> policyDocument, String policyName) {
+
+        return new Policy(policyName, new PolicyArgs.Builder()
+                .policy(policyDocument.applyValue(GetPolicyDocumentResult::json))
+                .build());
+    }
 }

@@ -1,17 +1,29 @@
 package com.appagility.powercircles.commandhandlers.infrastructure.aws;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.appagility.powercircles.commandhandlers.domain.commands.PersonCreateCommand;
 import com.appagility.powercircles.commandhandlers.domain.Person;
 import com.appagility.powercircles.commandhandlers.services.PersonServices;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class PersonHandler {
+import javax.security.auth.login.CredentialException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.List;
+import java.util.Map;
+
+public class PersonHandler implements RequestStreamHandler {
+
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     private PersonServices personServices = new PersonServices();
 
-    public void handleRequest(PersonCreateCommand createCommand, Context context) {
+    @Override
+    public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
 
-
-        personServices.handle(createCommand);
+        var batch = objectMapper.readValue(inputStream, Batch.class);
+        batch.records().forEach(createCommand -> personServices.handle(createCommand.personCreateCommand()));
     }
 }
