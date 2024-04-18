@@ -6,16 +6,13 @@ A PoC for building a Serverless architecture for CQRS + Event Sourcing on AWS us
 
 ## Commands
 
-Commands are created by an Integration from the API Gateway,
-they are put onto the Command Bus (EventBridge), then routed to a Command Queue (SQS),
-using the aggregate ID as the MessageGroup ensures commands for the same aggregate 
-are handled in order by the Command Handler (Lambda) which writes events to an
-Event Store (DynamoDb).
+Commands are created by an Integration from the API Gateway, and handled by the Command Handler (Lambda) 
+which writes events to an Event Store (DynamoDb).
 
 ## Events
 
 As Events are created by the Command Handlers in DynamoDb, they are
-streamed (DynamoDb streams) to an Event Bus (EventBridge), here they are routed
+streamed (DynamoDb streams) to an Event Bus (SNS), here they are routed
 to a Projection Queue (SQS).  These events are picked up by the Projection
 Handler (Lambda) which writes events to a Projection State Table (RDS).
 
@@ -31,7 +28,7 @@ already in the Projection Store (DynamoDb).  To do this when a new projection
 is created, the following sequence of events takes place:
 
 1. The Projection Handler (Lambda), the Projection Queue (SQS) and the Projection Replay Queue (SQS) are created
-2. Live events are routed from the Event Bus (EventBridge) to the Projection Queue
+2. Live events are routed from the Event Bus (SNS) to the Projection Queue
 3. The Projection Replay Queue is routed to the Projection Handler (Lambda)
 4. A Replay Step Function takes the necessary events from the Event Store (DynamoDb) and puts them in the Projection Replay Queue (SQS) possibly using a GSI
 5. We wait for the Projection Replay Queue to empty
