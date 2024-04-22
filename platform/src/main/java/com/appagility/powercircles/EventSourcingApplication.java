@@ -1,10 +1,10 @@
 package com.appagility.powercircles;
 
-import com.pulumi.aws.apigatewayv2.Api;
-import com.pulumi.aws.apigatewayv2.ApiArgs;
-import com.pulumi.aws.apigatewayv2.Stage;
-import com.pulumi.aws.apigatewayv2.StageArgs;
+import com.pulumi.aws.apigateway.*;
+import com.pulumi.aws.apigateway.inputs.RestApiEndpointConfigurationArgs;
 import com.pulumi.core.Output;
+import com.pulumi.resources.CustomResourceOptions;
+import com.pulumi.resources.Resource;
 import lombok.Builder;
 import lombok.Singular;
 
@@ -20,17 +20,32 @@ public class EventSourcingApplication {
 
     public Output<String> defineInfrastructure() {
 
-        var apiGateway = new Api("PowerCircles", new ApiArgs.Builder().protocolType("HTTP").build());
+        var restApi = new RestApi("PowerCircles", RestApiArgs.builder()
+                .endpointConfiguration(RestApiEndpointConfigurationArgs.builder()
+                        .types("REGIONAL")
+                        .build())
+                .build());
+
+        aggregates.forEach(a -> a.defineInfrastructure(restApi));
+
+        var integrations = aggregates.stream()
+                .flatMap(a -> a.getCommands().stream().map( c -> (Resource) c.getIntegration()))
+                .toList();
+
+        var customOptions = CustomResourceOptions.builder().dependsOn(integrations).build();
+
+
+        var deployment = new Deployment("deployment", DeploymentArgs.builder()
+                .restApi(restApi.id()).build(),
+                customOptions);
 
         var stage = new Stage("stage", new StageArgs.Builder()
-                .apiId(apiGateway.id())
-                .autoDeploy(true)
+                .restApi(restApi.id())
+                .stageName("dev")
+                .deployment(deployment.id())
                 .build()
         );
 
-        aggregates.forEach(a -> a.defineInfrastructure(apiGateway));
-
-        return Output.all(apiGateway.apiEndpoint(), stage.name())
-                .applyValue((o) -> o.get(0) + "/" + o.get(1));
+        return stage.invokeUrl();
     }
 }

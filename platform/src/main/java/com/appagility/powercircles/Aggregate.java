@@ -2,7 +2,7 @@ package com.appagility.powercircles;
 
 import com.amazonaws.auth.policy.Statement;
 import com.pulumi.asset.FileArchive;
-import com.pulumi.aws.apigatewayv2.Api;
+import com.pulumi.aws.apigateway.RestApi;
 import com.pulumi.aws.cloudwatch.*;
 import com.pulumi.aws.cloudwatch.inputs.EventTargetSqsTargetArgs;
 import com.pulumi.aws.dynamodb.Table;
@@ -22,6 +22,7 @@ import com.pulumi.aws.sqs.QueuePolicy;
 import com.pulumi.aws.sqs.QueuePolicyArgs;
 import com.pulumi.core.Output;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.Singular;
 
 import java.time.Duration;
@@ -36,11 +37,12 @@ public class Aggregate {
     private String name;
 
     @Singular
+    @Getter
     private List<Command> commands;
     private String commandHandlerArtifactName;
     private String commandHandlerName;
 
-    public void defineInfrastructure(Api apiGateway) {
+    public void defineInfrastructure(RestApi restApi) {
 
         var table = defineDynamoTable();
 
@@ -50,19 +52,17 @@ public class Aggregate {
         var commandHandlerQueue = defineQueueForCommandHandler();
 
         var lambdaRole = defineRoleForLambda(table);
-        var commandHandler = defineLambda(table, lambdaRole);
+        var commandHandler = defineLambda(table, lambdaRole, restApi);
 
-        defineConnectionBetween(commandBus, commandHandlerQueue);
-        defineConnectionBetween(commandHandlerQueue, commandHandler);
+//        defineConnectionBetween(commandBus, commandHandlerQueue);
+//        defineConnectionBetween(commandHandlerQueue, commandHandler);
 
         definePolicyAndAttachmentToReceiveFromSqs(commandHandlerQueue, lambdaRole);
 
         var roleForGatewayToConnectToBus = defineRoleForGatewayToConnectToCommandBus();
 
         commands.forEach(c -> c.defineRouteAndConnectToCommandBus(
-                apiGateway,
-                roleForGatewayToConnectToBus,
-                commandBus));
+                restApi, commandHandler));
     }
 
 
@@ -109,9 +109,10 @@ public class Aggregate {
                 .visibilityTimeoutSeconds((int) LAMBDA_TIMEOUT.toSeconds()).build());
     }
 
-    private Function defineLambda(Table table, Role lambdaRole) {
+    private Function defineLambda(Table table, Role lambdaRole, RestApi restApi) {
 
-        return new Function(name, FunctionArgs
+
+        var function = new Function(name, FunctionArgs
                 .builder()
                 .runtime("java21")
                 .handler(commandHandlerName)
@@ -122,6 +123,15 @@ public class Aggregate {
                         tableName -> FunctionEnvironmentArgs.builder()
                                 .variables(Map.of("PERSON_TABLE_NAME", tableName)).build()))
                 .build());
+
+        new Permission("allow_invoke_from_restapi", PermissionArgs.builder()
+                .action("lambda:InvokeFunction")
+                .function(function.name())
+                .principal("apigateway.amazonaws.com")
+                .sourceArn(restApi.executionArn().applyValue(arn -> arn + "/*/*"))
+                .build());
+
+        return function;
     }
 
     private static Role defineRoleForLambda(Table table) {

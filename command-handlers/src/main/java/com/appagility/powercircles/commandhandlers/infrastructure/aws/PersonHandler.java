@@ -23,7 +23,7 @@ public class PersonHandler implements RequestStreamHandler {
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
 
-        var batch = objectMapper.readValue(inputStream, Batch.class);
-        batch.records().forEach(createCommand -> personServices.handle(createCommand.personCreateCommand()));
+        var personCreateCommand = objectMapper.readValue(inputStream, PersonCreateCommand.class);
+        personServices.handle(personCreateCommand);
     }
 }

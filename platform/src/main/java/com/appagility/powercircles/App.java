@@ -21,6 +21,7 @@ public class App {
             var apiUrl = application.defineInfrastructure();
 
             ctx.export("apiUrl", apiUrl);
+
         });
 
     }
