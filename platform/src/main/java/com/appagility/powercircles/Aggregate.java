@@ -1,25 +1,22 @@
 package com.appagility.powercircles;
 
-import com.amazonaws.auth.policy.Statement;
 import com.pulumi.asset.FileArchive;
 import com.pulumi.aws.apigateway.RestApi;
-import com.pulumi.aws.cloudwatch.*;
-import com.pulumi.aws.cloudwatch.inputs.EventTargetSqsTargetArgs;
 import com.pulumi.aws.dynamodb.Table;
 import com.pulumi.aws.dynamodb.TableArgs;
 import com.pulumi.aws.dynamodb.inputs.TableAttributeArgs;
 import com.pulumi.aws.iam.*;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
-import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementConditionArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementPrincipalArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
-import com.pulumi.aws.lambda.*;
+import com.pulumi.aws.lambda.Function;
+import com.pulumi.aws.lambda.FunctionArgs;
+import com.pulumi.aws.lambda.Permission;
+import com.pulumi.aws.lambda.PermissionArgs;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
 import com.pulumi.aws.sqs.Queue;
 import com.pulumi.aws.sqs.QueueArgs;
-import com.pulumi.aws.sqs.QueuePolicy;
-import com.pulumi.aws.sqs.QueuePolicyArgs;
 import com.pulumi.core.Output;
 import lombok.Builder;
 import lombok.Getter;
@@ -46,23 +43,14 @@ public class Aggregate {
 
         var table = defineDynamoTable();
 
-        defineEventBus();
-
-        var commandBus = defineCommandBus();
         var commandHandlerQueue = defineQueueForCommandHandler();
 
         var lambdaRole = defineRoleForLambda(table);
         var commandHandler = defineLambda(table, lambdaRole, restApi);
 
-//        defineConnectionBetween(commandBus, commandHandlerQueue);
-//        defineConnectionBetween(commandHandlerQueue, commandHandler);
-
         definePolicyAndAttachmentToReceiveFromSqs(commandHandlerQueue, lambdaRole);
 
-        var roleForGatewayToConnectToBus = defineRoleForGatewayToConnectToCommandBus();
-
-        commands.forEach(c -> c.defineRouteAndConnectToCommandBus(
-                restApi, commandHandler));
+        commands.forEach(c -> c.defineRouteAndConnectToCommandBus(restApi, commandHandler));
     }
 
 
@@ -78,28 +66,6 @@ public class Aggregate {
                 .billingMode("PAY_PER_REQUEST")
                 .build());
     }
-
-
-    private EventBus defineEventBus() {
-
-        return new EventBus(name + "-events");
-    }
-
-    private EventBus defineCommandBus() {
-
-        return new EventBus(name + "-commands");
-    }
-
-    private Role defineRoleForGatewayToConnectToCommandBus() {
-
-        var assumeGatewayRolePolicyDocument = createAssumeRolePolicyDocument("apigateway.amazonaws.com");
-
-        return new Role("api-gateway-to-" + name + "-command-bus", new RoleArgs.Builder()
-                .assumeRolePolicy(assumeGatewayRolePolicyDocument.applyValue(GetPolicyDocumentResult::json))
-                .managedPolicyArns("arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess")
-                .build());
-    }
-
 
     private Queue defineQueueForCommandHandler() {
 
@@ -168,63 +134,6 @@ public class Aggregate {
                                 .identifiers(service)
                                 .build())
                         .build())
-                .build());
-    }
-
-    private void defineConnectionBetween(EventBus commandBus, Queue commandHandlerQueue) {
-
-        var rule = new EventRule(name, new EventRuleArgs.Builder()
-                .eventBusName(commandBus.name())
-                .eventPattern("{\"source\": [\"my-event-source\"]}")
-                .build());
-
-        new EventTarget(name, new EventTargetArgs.Builder()
-                .arn(commandHandlerQueue.arn())
-                .sqsTarget(new EventTargetSqsTargetArgs.Builder()
-                        .messageGroupId("aggregateId")
-                        .build())
-                .rule(rule.name())
-                .eventBusName(commandBus.name())
-                .inputPath("$.detail")
-                .build());
-
-        var queuePolicyDocument = Output.all(commandHandlerQueue.arn(), rule.arn()).apply(queueArnAndRuleArn ->
-
-                IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
-                        .statements(GetPolicyDocumentStatementArgs.builder()
-                                .effect(Statement.Effect.Allow.name())
-                                .principals(GetPolicyDocumentStatementPrincipalArgs.builder()
-                                        .type("Service")
-                                        .identifiers("events.amazonaws.com")
-                                        .build())
-                                .actions("sqs:SendMessage")
-                                .resources(queueArnAndRuleArn.getFirst())
-                                .conditions(GetPolicyDocumentStatementConditionArgs.builder()
-                                        .test("ArnEquals")
-                                        .variable("aws:SourceArn")
-                                        .values(queueArnAndRuleArn.get(1))
-                                        .build())
-                                .build())
-                        .build()));
-
-        new QueuePolicy("allow_command_queue", QueuePolicyArgs.builder()
-                .queueUrl(commandHandlerQueue.url())
-                .policy(queuePolicyDocument.applyValue(GetPolicyDocumentResult::json))
-                .build());
-    }
-
-    private void defineConnectionBetween(Queue commandHandlerQueue, Function commandHandler) {
-
-        new Permission(name, new PermissionArgs.Builder()
-                .action("lambda:InvokeFunction")
-                .principal("sqs.amazonaws.com")
-                .function(commandHandler.arn())
-                .sourceArn(commandHandlerQueue.arn())
-                .build());
-
-        new EventSourceMapping(name, new EventSourceMappingArgs.Builder()
-                .eventSourceArn(commandHandlerQueue.arn())
-                .functionName(commandHandler.name())
                 .build());
     }
 

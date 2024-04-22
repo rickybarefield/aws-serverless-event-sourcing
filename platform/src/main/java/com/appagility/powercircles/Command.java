@@ -1,9 +1,8 @@
 package com.appagility.powercircles;
 
 import com.pulumi.aws.apigateway.*;
-import com.pulumi.aws.cloudwatch.EventBus;
-import com.pulumi.aws.iam.Role;
 import com.pulumi.aws.lambda.Function;
+import com.pulumi.resources.CustomResourceOptions;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -11,7 +10,7 @@ import java.util.Map;
 
 public class Command {
 
-    private String name;
+    private final String name;
 
     @Getter
     private Integration integration;
@@ -45,31 +44,24 @@ public class Command {
                 .type("AWS")
                 .restApi(restApi.id())
                 .resourceId(resource.id())
-                .httpMethod("POST")
+                .httpMethod(method.httpMethod())
                 .integrationHttpMethod("POST")
                 .uri(commandHandler.invokeArn())
                 .build());
 
+        new MethodResponse(name, MethodResponseArgs.builder()
+                .restApi(restApi.id())
+                .resourceId(resource.id())
+                .httpMethod(method.httpMethod())
+                .statusCode("200")
+                .build());
 
-
-//        var integration = new Integration(name, IntegrationArgs.builder()
-//                .apiId(apiGateway.id())
-//                .integrationType("AWS_PROXY")
-//                .integrationSubtype("EventBridge-PutEvents")
-//                .requestParameters(commandBus.name().applyValue(n ->  Map.of(
-//                        "EventBusName", n,
-//                        "Detail", "$request.body",
-//                        "DetailType", "my-detail-type",
-//                        "Source", "my-event-source"
-//                )))
-//                .credentialsArn(roleForGatewayToConnectToBus.arn())
-//                .build());
-//
-//        new Route(name, RouteArgs.builder()
-//                .apiId(apiGateway.id())
-//                .routeKey("POST /" + name)
-//                .target(integration.id().applyValue(t -> "integrations/" + t))
-//                .build());
-
+        new IntegrationResponse(name, IntegrationResponseArgs.builder()
+                .restApi(restApi.id())
+                .resourceId(resource.id())
+                .statusCode("200")
+                .httpMethod(method.httpMethod())
+                .responseTemplates(Map.of("application/json", "{ \"dummy\": \"value\" }"))
+                .build(), CustomResourceOptions.builder().dependsOn(integration).build());
     }
 }
