@@ -10,11 +10,12 @@ public class App {
 
             var application = new EventSourcingApplication.EventSourcingApplicationBuilder()
                     .name("PowerCircles")
-                    .aggregate(new Aggregate.AggregateBuilder()
+                    .aggregate(Aggregate.builder()
                             .name("person")
                             .commandHandlerName(PersonHandler.class.getName())
                             .commandHandlerArtifactName("power-circles-command-handlers.jar")
-                            .command(new Command.CommandBuilder().name("Create").build())
+                            .command(Command.builder().name("Create").build())
+                            .projection(Projection.builder().name("Summary").build())
                             .build())
                     .build();
 

@@ -34,3 +34,34 @@ is created, the following sequence of events takes place:
 5. We wait for the Projection Replay Queue to empty
 6. We now route the Projection Queue to the Projection Handler
 
+## TODO
+
+### Diagram
+
+* [ ] Update to show need for lambda to get from dynamodb stream to SNS
+
+### Platform
+
+* [ ] Might be neater (less platform specific) to transform dynamo stream containing dynamo json 
+(which includes "S" for each String etc) into something simpler
+* [ ] Remove magic strings
+* [ ] Put a naming strategy in place
+* [ ] Rest API needs to be RESTful (i.e. not /Create)
+* [ ] Response to command needs to not be a dummy response
+
+### Projection
+
+* [ ] Create one!
+
+### Command Handlers
+
+* [ ] Events should probably have a date/time on them too
+* [ ] Add Dependency injection (Dagger?) to command handlers
+* [ ] Create a second command and event
+
+### Testing
+
+* [ ] Define approach
+* [ ] Unit tests for command handlers and projections
+* [ ] Unit tests for platform?
+* [ ] Overall integration tests
