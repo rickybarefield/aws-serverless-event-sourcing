@@ -21,6 +21,8 @@
     <modules>
         <module>platform</module>
         <module>command-handlers</module>
+        <module>summary-projection</module>
+        <module>events</module>
     </modules>
 
     <build>

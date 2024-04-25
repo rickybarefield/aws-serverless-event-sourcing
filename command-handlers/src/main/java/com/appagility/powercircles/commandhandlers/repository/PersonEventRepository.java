@@ -1,8 +1,9 @@
 package com.appagility.powercircles.commandhandlers.repository;
 
-import com.appagility.powercircles.commandhandlers.domain.events.PersonEvent;
 
-import java.util.List;
+
+import com.appagility.powercircles.domain.events.PersonEvent;
+
 import java.util.stream.Stream;
 
 public interface PersonEventRepository {

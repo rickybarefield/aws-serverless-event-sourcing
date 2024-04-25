@@ -1,8 +1,9 @@
 package com.appagility.powercircles.commandhandlers.domain;
 
 import com.appagility.powercircles.commandhandlers.domain.commands.PersonCreateCommand;
-import com.appagility.powercircles.commandhandlers.domain.events.PersonCreatedEvent;
-import com.appagility.powercircles.commandhandlers.domain.events.PersonEvent;
+import com.appagility.powercircles.domain.events.PersonCreatedEvent;
+import com.appagility.powercircles.domain.events.PersonEvent;
+import com.appagility.powercircles.domain.events.PersonEventVisitor;
 
 import java.util.ArrayList;
 import java.util.List;
