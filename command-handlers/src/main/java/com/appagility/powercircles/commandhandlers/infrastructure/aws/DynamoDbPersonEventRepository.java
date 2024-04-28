@@ -5,10 +5,10 @@ import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
-import com.appagility.powercircles.commandhandlers.domain.PersonEventVisitor;
-import com.appagility.powercircles.commandhandlers.domain.events.PersonCreatedEvent;
-import com.appagility.powercircles.commandhandlers.domain.events.PersonEvent;
 import com.appagility.powercircles.commandhandlers.repository.PersonEventRepository;
+import com.appagility.powercircles.domain.events.PersonCreatedEvent;
+import com.appagility.powercircles.domain.events.PersonEvent;
+import com.appagility.powercircles.domain.events.PersonEventVisitor;
 
 import java.util.Optional;
 import java.util.stream.Stream;

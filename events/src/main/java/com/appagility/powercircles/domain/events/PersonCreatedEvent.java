@@ -1,7 +1,5 @@
-package com.appagility.powercircles.commandhandlers.domain.events;
+package com.appagility.powercircles.domain.events;
 
-import com.appagility.powercircles.commandhandlers.domain.PersonEventVisitor;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.util.UUID;

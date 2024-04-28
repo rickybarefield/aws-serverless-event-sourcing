@@ -1,7 +1,6 @@
-package com.appagility.powercircles.commandhandlers.domain.events;
+package com.appagility.powercircles.domain.events;
 
 
-import com.appagility.powercircles.commandhandlers.domain.PersonEventVisitor;
 import lombok.Getter;
 
 public abstract class PersonEvent {
