@@ -9,12 +9,27 @@ public class EventHandler {
 
         try(EntityManager entityManager =  JpaInfrastructure.createEntityManager()) {
 
+
             var summary = PersonSummary.builder()
                     .id(personCreatedEvent.getPersonId())
                     .name(personCreatedEvent.getName())
                     .build();
 
-            entityManager.persist(summary);
+            var transaction = entityManager.getTransaction();
+
+            try {
+
+                transaction.begin();
+
+                entityManager.persist(summary);
+
+                transaction.commit();
+            } catch (Exception e) {
+
+                transaction.rollback();
+                throw e;
+            }
+
         }
 
     }
