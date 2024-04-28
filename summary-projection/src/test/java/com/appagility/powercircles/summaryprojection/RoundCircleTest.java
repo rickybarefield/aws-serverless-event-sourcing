@@ -1,6 +1,7 @@
 package com.appagility.powercircles.summaryprojection;
 
 import com.appagility.powercircles.domain.events.PersonCreatedEvent;
+import com.appagility.powercircles.domain.events.PersonCreatedEventDetail;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ public class RoundCircleTest {
         var personName = "test-name";
         var personId = "test-id";
 
-        var event = new PersonCreatedEvent(personId, 1, true, personName);
+        var event = new PersonCreatedEvent(personId, 1, new PersonCreatedEventDetail(personName));
 
         new EventHandler().handle(event);
 

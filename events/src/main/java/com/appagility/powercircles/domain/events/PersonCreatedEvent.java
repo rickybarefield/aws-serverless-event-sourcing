@@ -1,31 +1,30 @@
 package com.appagility.powercircles.domain.events;
 
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 
 import java.util.UUID;
 
-public class PersonCreatedEvent extends PersonEvent {
+public class PersonCreatedEvent extends PersonEvent<PersonCreatedEventDetail> {
 
     public final static String TYPE = "PersonCreatedEvent";
 
-    @Getter
-    private final String name;
-
-    public PersonCreatedEvent(String name) {
-
-        super(UUID.randomUUID().toString(), 1, false);
-        this.name = name;
-    }
-
-    public PersonCreatedEvent(String personId, int sequenceNumber, boolean persisted, String name) {
-
-        super(personId, sequenceNumber, persisted);
-        this.name = name;
+    @JsonCreator
+    public PersonCreatedEvent(@JsonProperty("personId") String personId, @JsonProperty("sequenceNumber") int sequenceNumber, @JsonProperty("detail") PersonCreatedEventDetail personCreatedEventDetail) {
+        super(personId, sequenceNumber, personCreatedEventDetail);
     }
 
     @Override
-    public void accept(PersonEventVisitor personEventVisitor) {
+    public void accept(PersonEventVisitor eventVisitor) {
 
-        personEventVisitor.visit(this);
+        eventVisitor.visit(this);
+    }
+
+    public static PersonCreatedEvent forNewAggregate(String name) {
+
+        return new PersonCreatedEvent(UUID.randomUUID().toString(),
+                1,
+                new PersonCreatedEventDetail(name));
     }
 }

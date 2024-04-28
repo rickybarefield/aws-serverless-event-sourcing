@@ -1,4 +1,5 @@
 const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
+const { unmarshall } = require("@aws-sdk/util-dynamodb");
 
 exports.handler = async (event) => {
 
@@ -10,7 +11,7 @@ exports.handler = async (event) => {
 
     const input = {
       TopicArn: process.env.TARGET_TOPIC_ARN,
-      Message: JSON.stringify(domainEvent),
+      Message: JSON.stringify(unmarshall(domainEvent)),
       MessageGroupId: domainEvent.id.S,
       MessageDeduplicationId: domainEvent.id.S + "-" + domainEvent.sequenceNumber.N
     };

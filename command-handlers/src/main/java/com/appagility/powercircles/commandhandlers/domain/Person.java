@@ -3,9 +3,11 @@ package com.appagility.powercircles.commandhandlers.domain;
 import com.appagility.powercircles.commandhandlers.domain.commands.PersonCreateCommand;
 import com.appagility.powercircles.domain.events.PersonCreatedEvent;
 import com.appagility.powercircles.domain.events.PersonEvent;
+import com.appagility.powercircles.domain.events.PersonEventDetail;
 import com.appagility.powercircles.domain.events.PersonEventVisitor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Person implements PersonEventVisitor {
@@ -13,31 +15,37 @@ public class Person implements PersonEventVisitor {
     private String id;
     private String name;
 
-    private final List<PersonEvent> events = new ArrayList<>();
+    private final List<PersonEvent<? extends PersonEventDetail>> events;
+    private final List<PersonEvent<? extends PersonEventDetail>> newEvents = new ArrayList<>();
 
-    private Person() {}
 
-    public Person(List<PersonEvent> events) {
+    public Person(List<PersonEvent<? extends PersonEventDetail>> events) {
 
-        events.forEach(e -> e.accept(this));
+        this.events = new ArrayList<>(events);
+        this.events.forEach(e -> e.accept(this));
+    }
+
+    private Person() {
+        this(Collections.emptyList());
     }
 
     public static Person handle(PersonCreateCommand createCommand) {
 
         var person = new Person();
-        new PersonCreatedEvent(createCommand.name()).accept(person);
+        var event = PersonCreatedEvent.forNewAggregate(createCommand.name());
+        event.accept(person);
+        person.newEvents.add(event);
         return person;
     }
 
     public void visit(PersonCreatedEvent personCreatedEvent) {
 
         this.id = personCreatedEvent.getPersonId();
-        this.name = personCreatedEvent.getName();
-        this.events.add(personCreatedEvent);
+        this.name = personCreatedEvent.getDetail().getName();
     }
 
-    public List<PersonEvent> getEvents() {
+    public List<PersonEvent<? extends PersonEventDetail>> getNewEvents() {
 
-        return new ArrayList<>(events);
+        return new ArrayList<>(newEvents);
     }
 }

@@ -19,7 +19,6 @@ public final class PersonRepository {
 
     public void save(Person person) {
 
-        var newEvents = person.getEvents().stream().filter(e -> !e.isPersisted());
-        personEventRepository.save(newEvents);
+        personEventRepository.save(person.getNewEvents());
     }
 }

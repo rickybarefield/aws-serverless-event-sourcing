@@ -12,7 +12,7 @@ public class EventHandler {
 
             var summary = PersonSummary.builder()
                     .id(personCreatedEvent.getPersonId())
-                    .name(personCreatedEvent.getName())
+                    .name(personCreatedEvent.getDetail().getName())
                     .build();
 
             var transaction = entityManager.getTransaction();
