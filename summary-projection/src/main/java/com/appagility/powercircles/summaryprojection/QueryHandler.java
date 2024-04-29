@@ -1,20 +1,25 @@
 package com.appagility.powercircles.summaryprojection;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Persistence;
+import lombok.AllArgsConstructor;
 
+import java.sql.SQLException;
 import java.util.List;
 
+@AllArgsConstructor
 public class QueryHandler {
+
+    private final PersonSummaryDao personSummaryDao;
 
     public List<PersonSummary> getAll() {
 
-        try(EntityManager entityManager =  JpaInfrastructure.createEntityManager()) {
+        try {
 
-            var query = entityManager.createQuery("SELECT s FROM PersonSummary s", PersonSummary.class);
-            return query.getResultList();
+            return personSummaryDao.loadAll();
+
+        } catch (SQLException e) {
+
+            throw new RuntimeException(e);
         }
-
     }
 
 }

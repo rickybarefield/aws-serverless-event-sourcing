@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class RoundCircleTest {
@@ -20,9 +19,11 @@ public class RoundCircleTest {
 
             var schema = new String(schemaResource.readAllBytes(), StandardCharsets.UTF_8);
 
-            var connection = DriverManager.getConnection("jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1", "sa", "");
-            var statement = connection.createStatement();
-            statement.execute(schema);
+            try(var connection = new H2ConnectionFactory().create()) {
+
+                var statement = connection.createStatement();
+                statement.execute(schema);
+            }
 
         } catch (IOException | SQLException e) {
 
@@ -38,16 +39,16 @@ public class RoundCircleTest {
 
         var event = new PersonCreatedEvent(personId, 1, new PersonCreatedEventDetail(personName));
 
-        new EventHandler().handle(event);
+        new PersonSummaryEventHandler(new PersonSummaryDao(new H2ConnectionFactory())).visit(event);
 
-        var retrieved = new QueryHandler().getAll();
+        var retrieved = new QueryHandler(new PersonSummaryDao(new H2ConnectionFactory())).getAll();
 
         Assertions.assertEquals(1, retrieved.size());
 
         var retrievedPersonSummary = retrieved.getFirst();
 
         Assertions.assertEquals(personName, retrievedPersonSummary.getName());
-        Assertions.assertEquals(personId, retrievedPersonSummary.getId());
+        Assertions.assertEquals(personId, retrievedPersonSummary.getPersonId());
     }
 
 }
