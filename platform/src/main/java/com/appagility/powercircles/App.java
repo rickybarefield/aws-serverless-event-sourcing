@@ -15,7 +15,7 @@ public class App {
                             .commandHandlerName(PersonHandler.class.getName())
                             .commandHandlerArtifactName("power-circles-command-handlers.jar")
                             .command(Command.builder().name("Create").build())
-                            .projection(Projection.builder().name("Summary").build())
+                            .projection(Projection.builder().name("Summary").schema("").build())
                             .build())
                     .build();
 

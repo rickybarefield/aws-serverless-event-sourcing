@@ -10,14 +10,17 @@ import com.pulumi.aws.apigateway.RestApi;
 import com.pulumi.aws.dynamodb.Table;
 import com.pulumi.aws.dynamodb.TableArgs;
 import com.pulumi.aws.dynamodb.inputs.TableAttributeArgs;
-import com.pulumi.aws.iam.*;
+import com.pulumi.aws.iam.IamFunctions;
+import com.pulumi.aws.iam.Role;
+import com.pulumi.aws.iam.RoleArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
-import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementPrincipalArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
 import com.pulumi.aws.lambda.*;
 import com.pulumi.aws.lambda.enums.Runtime;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
+import com.pulumi.aws.rds.Instance;
+import com.pulumi.aws.rds.InstanceArgs;
 import com.pulumi.aws.sns.Topic;
 import com.pulumi.aws.sns.TopicArgs;
 import com.pulumi.core.Output;
@@ -36,6 +39,7 @@ import java.util.Map;
 public class Aggregate {
 
     public static final Duration LAMBDA_TIMEOUT = Duration.ofMinutes(1);
+    public static final String PROJECTION_DATABASE_USERNAME = "sa";
     private String name;
 
     @Singular
@@ -56,10 +60,19 @@ public class Aggregate {
 
         var eventBus = defineTopicForEventBus();
 
-        streamFromEventStoreToEventBus(eventStore, eventBus);
+        defineStreamFromEventStoreToEventBus(eventStore, eventBus);
+
+        var projectionsDatabase = defineProjectionDatabase();
+
+        var databaseSchemaInitializer = DatabaseSchemaInitializer.builder()
+                .databaseInstance(projectionsDatabase)
+                .databaseName(name + "_projections")
+                .databaseUsername(PROJECTION_DATABASE_USERNAME).build();
+
+        databaseSchemaInitializer.defineInfrastructure();
 
         commands.forEach(c -> c.defineRouteAndConnectToCommandBus(restApi, commandHandler));
-        projections.forEach(p -> p.defineProjectionAndSubscribeToEventBus(eventBus));
+        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, databaseSchemaInitializer));
     }
 
     private Topic defineTopicForEventBus() {
@@ -69,7 +82,7 @@ public class Aggregate {
                 .build());
     }
 
-    private void streamFromEventStoreToEventBus(Table eventStore, Topic eventBus) {
+    private void defineStreamFromEventStoreToEventBus(Table eventStore, Topic eventBus) {
 
 
         var allowWriteToSnsTopic = IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
@@ -88,13 +101,13 @@ public class Aggregate {
                         .build())))
                 .build());
 
-        var allowWriteToSnsForLambdaPolicy = policyForDocument(allowWriteToSnsTopic,
+        var allowWriteToSnsForLambdaPolicy = IamPolicyFunctions.policyForDocument(allowWriteToSnsTopic,
                 "allow_write_to_sns");
 
-        var allowReadFromStreamPolicy = policyForDocument(allowReadFromStream,
+        var allowReadFromStreamPolicy = IamPolicyFunctions.policyForDocument(allowReadFromStream,
                 "allow_read_from_dynamo_stream");
 
-        var assumeLambdaRole = createAssumeRolePolicyDocument("lambda.amazonaws.com");
+        var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
 
         var role = new Role("forwarder-lambda-role", new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
@@ -157,7 +170,7 @@ public class Aggregate {
 
         var function = new Function(name, FunctionArgs
                 .builder()
-                .runtime("java21")
+                .runtime(Runtime.Java21)
                 .handler(commandHandlerName)
                 .role(lambdaRole.arn())
                 .code(new FileArchive("./target/lambdas/" + commandHandlerArtifactName))
@@ -187,10 +200,10 @@ public class Aggregate {
                         .build())))
                 .build());
 
-        var allowAllOnDynamoForTablePolicy = policyForDocument(allowAllOnDynamoForTablePolicyDocument,
+        var allowAllOnDynamoForTablePolicy = IamPolicyFunctions.policyForDocument(allowAllOnDynamoForTablePolicyDocument,
                 "allow_all_on_dynamodb");
 
-        var assumeLambdaRole = createAssumeRolePolicyDocument("lambda.amazonaws.com");
+        var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
 
         return new Role("lambda-role", new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
@@ -200,25 +213,20 @@ public class Aggregate {
                 .build());
     }
 
-    private static Output<GetPolicyDocumentResult> createAssumeRolePolicyDocument(String service) {
+    private Instance defineProjectionDatabase() {
 
-        return IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
-                .statements(GetPolicyDocumentStatementArgs.builder()
-                        .effect(Statement.Effect.Allow.name())
-                        .actions("sts:AssumeRole")
-                        .principals(GetPolicyDocumentStatementPrincipalArgs.builder()
-                                .type("Service")
-                                .identifiers(service)
-                                .build())
-                        .build())
-                .build());
-    }
-
-
-    private static Policy policyForDocument(Output<GetPolicyDocumentResult> policyDocument, String policyName) {
-
-        return new Policy(policyName, new PolicyArgs.Builder()
-                .policy(policyDocument.applyValue(GetPolicyDocumentResult::json))
+        return new Instance(name + "-projections", InstanceArgs.builder()
+                .dbName(name + "Projections")
+                .username(PROJECTION_DATABASE_USERNAME)
+                .password("FIXME_FIXME") //FIXME
+                .allocatedStorage(5)
+                .engine("postgres")
+                .engineVersion("16.1")
+                .instanceClass("db.t4g.micro")
+                .skipFinalSnapshot(true)
+                .publiclyAccessible(true)
+                .deletionProtection(false)
+                .iamDatabaseAuthenticationEnabled(true)
                 .build());
     }
 }

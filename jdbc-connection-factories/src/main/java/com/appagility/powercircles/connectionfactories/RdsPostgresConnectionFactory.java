@@ -1,17 +1,16 @@
-package com.appagility.powercircles.summaryprojection.infrastructure.aws;
+package com.appagility.powercircles.connectionfactories;
 
-import com.appagility.powercircles.summaryprojection.ConnectionFactory;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.rds.RdsUtilities;
 import software.amazon.awssdk.services.rds.model.GenerateAuthenticationTokenRequest;
 
-public class RdsConnectionFactory extends ConnectionFactory {
+public class RdsPostgresConnectionFactory extends ConnectionFactory {
 
     @Override
     protected String getDriverName() {
 
-        return null;
+        return "org.postgresql.Driver";
     }
 
     @Override
@@ -23,13 +22,13 @@ public class RdsConnectionFactory extends ConnectionFactory {
     @Override
     protected String getDbUsername() {
 
-        return System.getenv("DB_URL");
+        return System.getenv("DB_USERNAME");
     }
 
     @Override
     protected String getDbPassword() {
 
-        return null;
+        return generateAuthToken();
     }
 
     private String generateAuthToken() {
@@ -51,6 +50,10 @@ public class RdsConnectionFactory extends ConnectionFactory {
     }
 
     private static Region getRegion() {
-        return Region.of(System.getProperty("aws.region"));
+
+        var awsRegion = System.getenv("AWS_REGION");
+        var awsDefaultRegion = System.getenv("AWS_DEFAULT_REGION");
+
+        return Region.of(awsRegion == null ? awsDefaultRegion : awsRegion);
     }
 }

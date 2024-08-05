@@ -3,7 +3,8 @@
     "awscli2@latest",
     "maven@latest",
     "jdk@21+35",
-    "jetbrains.idea-community@latest"
+    "jetbrains.idea-community@latest",
+    "postgresql@latest"
   ],
   "shell": {
     "init_hook": [

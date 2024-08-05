@@ -1,4 +1,4 @@
-package com.appagility.powercircles.summaryprojection;
+package com.appagility.powercircles.connectionfactories;
 
 public class H2ConnectionFactory extends ConnectionFactory {
 

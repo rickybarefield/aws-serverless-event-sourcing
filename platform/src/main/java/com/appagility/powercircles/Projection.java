@@ -7,6 +7,7 @@ import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementConditionArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementPrincipalArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
+import com.pulumi.aws.rds.Instance;
 import com.pulumi.aws.sns.Topic;
 import com.pulumi.aws.sns.TopicSubscription;
 import com.pulumi.aws.sns.TopicSubscriptionArgs;
@@ -18,20 +19,21 @@ import lombok.Builder;
 
 import java.util.List;
 
+@Builder
 public class Projection {
 
     private String name;
+    private String schema;
+    private String projectionHandlerName;
 
-    @Builder
-    public Projection(String name) {
-
-        this.name = name;
-    }
-
-    public void defineProjectionAndSubscribeToEventBus(Topic eventBus) {
+    public void defineInfrastructureAndSubscribeToEventBus(Topic eventBus,
+                                                           DatabaseSchemaInitializer databaseSchemaInitializer) {
 
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
+
+
+
     }
 
     private Queue defineQueue() {

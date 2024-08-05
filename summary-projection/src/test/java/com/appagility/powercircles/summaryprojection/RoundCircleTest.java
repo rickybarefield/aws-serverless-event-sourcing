@@ -1,5 +1,6 @@
 package com.appagility.powercircles.summaryprojection;
 
+import com.appagility.powercircles.connectionfactories.H2ConnectionFactory;
 import com.appagility.powercircles.domain.events.PersonCreatedEvent;
 import com.appagility.powercircles.domain.events.PersonCreatedEventDetail;
 import org.junit.jupiter.api.Assertions;

@@ -38,6 +38,11 @@
             <version>${command-handlers-version}</version>
         </dependency>
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>aws-lambda-sql-executor</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>2.17.0</version>
@@ -122,6 +127,15 @@
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.build.directory}/lambdas</outputDirectory>
                                     <destFileName>power-circles-command-handlers.jar</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>${project.groupId}</groupId>
+                                    <artifactId>aws-lambda-sql-executor</artifactId>
+                                    <version>1.0-SNAPSHOT</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}/lambdas</outputDirectory>
+                                    <destFileName>aws-lambda-sql-executor.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
                             <!-- other configurations here -->

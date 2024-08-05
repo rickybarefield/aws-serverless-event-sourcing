@@ -1,4 +1,4 @@
-package com.appagility.powercircles.summaryprojection;
+package com.appagility.powercircles.connectionfactories;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -19,6 +19,7 @@ public abstract class ConnectionFactory {
         }
     }
 
+    //TODO Possibly no longer needed due to new Java Service Provider mechanism
     protected abstract String getDriverName();
     protected abstract String getDbUrl();
     protected abstract String getDbUsername();

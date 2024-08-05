@@ -1,8 +1,8 @@
 package com.appagility.powercircles.summaryprojection;
 
+import com.appagility.powercircles.connectionfactories.ConnectionFactory;
 import lombok.AllArgsConstructor;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
