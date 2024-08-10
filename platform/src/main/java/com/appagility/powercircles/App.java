@@ -8,8 +8,24 @@ public class App {
 
         Pulumi.run(ctx -> {
 
+            var contextNamingStrategy = new ContextNamingStrategy(ctx);
+
+            var inputs = NetworkingInputs.deserialize(ctx);
+            var network =
+                    AwsNetwork.builder()
+                            .namingStrategy(contextNamingStrategy)
+                            .name("main")
+                            .tierNames("data")
+                            .networkRange(inputs.getNetworkCidrRange())
+                            .buildWithEvenlySplitSubnetsAcrossAllAvailabilityZones();
+
+            network.defineInfrastructure();
+
+            var dataSubnets = network.getSubnets("data");
+
             var application = new EventSourcingApplication.EventSourcingApplicationBuilder()
                     .name("PowerCircles")
+                    .dataSubnets(dataSubnets)
                     .aggregate(Aggregate.builder()
                             .name("person")
                             .commandHandlerName(PersonHandler.class.getName())

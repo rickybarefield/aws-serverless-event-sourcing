@@ -1,5 +1,7 @@
 package com.appagility.powercircles.connectionfactories;
 
+import java.util.Properties;
+
 public class H2ConnectionFactory extends ConnectionFactory {
 
     public static final String DB_URL = "jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1";
@@ -16,12 +18,21 @@ public class H2ConnectionFactory extends ConnectionFactory {
         return DB_URL;
     }
 
+
     @Override
-    protected String getDbUsername() {
+    protected Properties getDbConnectionProperties() {
+
+        var props = new Properties();
+        props.put("user", getDbUsername());
+        props.put("password", getDbPassword());
+        return props;
+    }
+
+    private String getDbUsername() {
         return DB_USERNAME;
     }
-    @Override
-    protected String getDbPassword() {
+
+    private String getDbPassword() {
         return DB_PASSWORD;
     }
 }
