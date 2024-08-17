@@ -2,7 +2,7 @@ package com.appagility.aws.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.appagility.powercircles.connectionfactories.RdsPostgresConnectionFactory;
+import com.appagility.powercircles.connectionfactories.RdsPostgresIamAuthConnectionFactory;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ public class SqlExecutor implements RequestHandler<SqlExecutorEvent, String> {
 
         LOG.warn("Invoked with " + sqlExecutorEvent);
 
-        try (var connection = new RdsPostgresConnectionFactory().create()) {
+        try (var connection = new RdsPostgresIamAuthConnectionFactory().create()) {
 
             ScriptRunner runner = new ScriptRunner(connection);
             runner.setSendFullScript(false);

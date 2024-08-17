@@ -16,9 +16,9 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Properties;
 
-public class RdsPostgresConnectionFactory extends ConnectionFactory {
+public class RdsPostgresIamAuthConnectionFactory extends ConnectionFactory {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RdsPostgresConnectionFactory.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RdsPostgresIamAuthConnectionFactory.class);
 
     private static final String SSL_CERTIFICATE = "eu-west-1-bundle.pem";
 
@@ -47,7 +47,7 @@ public class RdsPostgresConnectionFactory extends ConnectionFactory {
         Properties properties = new Properties();
         properties.setProperty("sslmode", "require");
         properties.setProperty("user", getDbUsername());
-        properties.setProperty("password", "FIXME_FIXME");//FIXME generateAuthToken());
+        properties.setProperty("password", generateAuthToken());
         return properties;
     }
 

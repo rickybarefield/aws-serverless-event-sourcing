@@ -16,7 +16,12 @@ import com.pulumi.aws.rds.Instance;
 import com.pulumi.aws.rds.InstanceArgs;
 import com.pulumi.aws.rds.SubnetGroup;
 import com.pulumi.aws.rds.SubnetGroupArgs;
+import com.pulumi.aws.secretsmanager.Secret;
+import com.pulumi.aws.secretsmanager.SecretVersion;
+import com.pulumi.aws.secretsmanager.SecretVersionArgs;
 import com.pulumi.core.Output;
+import com.pulumi.random.RandomPassword;
+import com.pulumi.random.RandomPasswordArgs;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -29,7 +34,11 @@ public class AwsRdsInstance {
 
     @Getter
     private final String name;
+
     private MayBecome<Instance> instance = MayBecome.empty("instance");
+
+    private MayBecome<Secret> userPasswordSecret = MayBecome.empty("userPasswordSecret");
+    private MayBecome<RandomPassword> userPassword = MayBecome.empty("userPassword");
 
     @Getter
     private final String username;
@@ -47,9 +56,28 @@ public class AwsRdsInstance {
 
     public void defineInfrastructure() {
 
+        defineUserPassword();
         defineSecurityGroup();
         defineDatabase();
         defineInitializer();
+    }
+
+    private void defineUserPassword() {
+
+        userPasswordSecret.set(new Secret(name + "-projections-secret"));
+
+        userPassword.set(new RandomPassword(name + "-projections-user-password", RandomPasswordArgs.builder()
+                .length(32)
+                .build()));
+
+        new SecretVersion(name + "-projections-secret-version", SecretVersionArgs.builder()
+                .secretString(userPassword.get().result())
+                .build());
+    }
+
+    private Output<String> getUserPassword() {
+
+        return userPassword.get().result();
     }
 
     private void defineDatabase() {
@@ -66,7 +94,7 @@ public class AwsRdsInstance {
         instance.set(new Instance(name + "-projections", InstanceArgs.builder()
                 .dbName(getDbName())
                 .username(username)
-                .password("FIXME_FIXME") //FIXME
+                .password(getUserPassword())
                 .allocatedStorage(5)
                 .engine("postgres")
                 .engineVersion("16.1")

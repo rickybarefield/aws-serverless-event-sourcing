@@ -33,6 +33,11 @@
             <version>(6.0.2,6.99]</version>
         </dependency>
         <dependency>
+            <groupId>com.pulumi</groupId>
+            <artifactId>random</artifactId>
+            <version>4.16.2</version>
+        </dependency>
+        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>${command-handlers-artifactId}</artifactId>
             <version>${command-handlers-version}</version>
