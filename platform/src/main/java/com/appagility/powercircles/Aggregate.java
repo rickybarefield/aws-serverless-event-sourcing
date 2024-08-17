@@ -10,8 +10,6 @@ import com.pulumi.aws.apigateway.RestApi;
 import com.pulumi.aws.dynamodb.Table;
 import com.pulumi.aws.dynamodb.TableArgs;
 import com.pulumi.aws.dynamodb.inputs.TableAttributeArgs;
-import com.pulumi.aws.ec2.SecurityGroup;
-import com.pulumi.aws.ec2.SecurityGroupArgs;
 import com.pulumi.aws.iam.IamFunctions;
 import com.pulumi.aws.iam.Role;
 import com.pulumi.aws.iam.RoleArgs;
@@ -21,10 +19,6 @@ import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
 import com.pulumi.aws.lambda.*;
 import com.pulumi.aws.lambda.enums.Runtime;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
-import com.pulumi.aws.rds.Instance;
-import com.pulumi.aws.rds.InstanceArgs;
-import com.pulumi.aws.rds.SubnetGroup;
-import com.pulumi.aws.rds.SubnetGroupArgs;
 import com.pulumi.aws.sns.Topic;
 import com.pulumi.aws.sns.TopicArgs;
 import com.pulumi.core.Output;
@@ -66,20 +60,16 @@ public class Aggregate {
 
         defineStreamFromEventStoreToEventBus(eventStore, eventBus);
 
-        var projectionsDatabaseSecurityGroup = createDatabaseSecurityGroup();
-        var projectionsDatabase = defineProjectionDatabase(dataSubnets, projectionsDatabaseSecurityGroup);
+        var rdsInstance = AwsRdsInstance.builder()
+                .awsSubnets(dataSubnets)
+                .name(name)
+                .username(PROJECTION_DATABASE_USERNAME)
+                .build();
 
-        var databaseSchemaInitializer = DatabaseSchemaInitializer.builder()
-                .databaseInstance(projectionsDatabase)
-                .databaseSecurityGroup(projectionsDatabaseSecurityGroup)
-                .dataSubnets(dataSubnets)
-                .databaseName(name + "_projections")
-                .databaseUsername(PROJECTION_DATABASE_USERNAME).build();
-
-        databaseSchemaInitializer.defineInfrastructure();
+        rdsInstance.defineInfrastructure();
 
         commands.forEach(c -> c.defineRouteAndConnectToCommandBus(restApi, commandHandler));
-        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, databaseSchemaInitializer));
+        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, rdsInstance));
     }
 
     private Topic defineTopicForEventBus() {
@@ -220,36 +210,4 @@ public class Aggregate {
                 .build());
     }
 
-    private Instance defineProjectionDatabase(List<AwsSubnet> awsSubnets, SecurityGroup securityGroup) {
-
-        var subnetIds = Output.all(awsSubnets.stream().map(s -> s.getId()).toList());
-
-        var subnetGroup = new SubnetGroup(name + "-projections", SubnetGroupArgs.builder()
-                .subnetIds(subnetIds)
-                .build());
-
-        var securityGroupIds = securityGroup.id().applyValue(Collections::singletonList);
-
-        return new Instance(name + "-projections", InstanceArgs.builder()
-                .dbName(name + "Projections")
-                .username(PROJECTION_DATABASE_USERNAME)
-                .password("FIXME_FIXME") //FIXME
-                .allocatedStorage(5)
-                .engine("postgres")
-                .engineVersion("16.1")
-                .instanceClass("db.t4g.micro")
-                .skipFinalSnapshot(true)
-                .publiclyAccessible(true)
-                .deletionProtection(false)
-                .iamDatabaseAuthenticationEnabled(true)
-                .dbSubnetGroupName(subnetGroup.name())
-                .vpcSecurityGroupIds(securityGroupIds)
-                .build());
-    }
-
-    private SecurityGroup createDatabaseSecurityGroup() {
-        var securityGroup = new SecurityGroup(name + "-projections", SecurityGroupArgs.builder()
-                .build());
-        return securityGroup;
-    }
 }

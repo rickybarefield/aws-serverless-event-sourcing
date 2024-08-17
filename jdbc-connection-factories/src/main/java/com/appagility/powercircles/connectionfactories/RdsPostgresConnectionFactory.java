@@ -47,7 +47,7 @@ public class RdsPostgresConnectionFactory extends ConnectionFactory {
         Properties properties = new Properties();
         properties.setProperty("sslmode", "require");
         properties.setProperty("user", getDbUsername());
-        properties.setProperty("password",generateAuthToken());
+        properties.setProperty("password", "FIXME_FIXME");//FIXME generateAuthToken());
         return properties;
     }
 
@@ -57,10 +57,6 @@ public class RdsPostgresConnectionFactory extends ConnectionFactory {
         return System.getenv("DB_USERNAME");
     }
 
-    private String getDbPassword() {
-
-        return generateAuthToken();
-    }
 
     private String generateAuthToken() {
 

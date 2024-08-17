@@ -44,4 +44,9 @@ public class AwsSubnet {
 
         return subnet.get().id();
     }
+
+    public Output<String> getVpcId() {
+
+        return subnet.get().vpcId();
+    }
 }

@@ -27,7 +27,7 @@ public class Projection {
     private String projectionHandlerName;
 
     public void defineInfrastructureAndSubscribeToEventBus(Topic eventBus,
-                                                           DatabaseSchemaInitializer databaseSchemaInitializer) {
+                                                           AwsRdsInstance projectionsInstance) {
 
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
