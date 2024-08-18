@@ -2,10 +2,9 @@ package com.appagility.powercircles;
 
 import com.google.common.collect.Streams;
 import com.pulumi.aws.AwsFunctions;
+import com.pulumi.aws.ec2.SecurityGroup;
 import com.pulumi.aws.ec2.Vpc;
 import com.pulumi.aws.ec2.VpcArgs;
-import com.pulumi.aws.ec2.VpcEndpoint;
-import com.pulumi.aws.ec2.VpcEndpointArgs;
 import com.pulumi.aws.inputs.GetAvailabilityZonesPlainArgs;
 import com.pulumi.core.Output;
 import com.pulumi.core.Tuples;
@@ -13,6 +12,7 @@ import inet.ipaddr.IPAddress;
 import lombok.SneakyThrows;
 
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,6 +25,9 @@ public class AwsNetwork {
     private final IPAddress range;
 
     private final Map<String, List<AwsSubnet>> subnetsByTier;
+    private Vpc vpc;
+
+    private Supplier<AwsVpcEndpoint> lazySecretsManagerEndpoint;
 
     public AwsNetwork(NamingStrategy namingStrategy, String name, IPAddress range, Map<String, List<AwsSubnet>> subnetsByTier) {
 
@@ -32,6 +35,8 @@ public class AwsNetwork {
         this.name = name;
         this.range = range;
         this.subnetsByTier = subnetsByTier;
+
+        this.lazySecretsManagerEndpoint = () -> AwsVpcEndpoint.define(namingStrategy, this, "secretsmanager");
     }
 
     public static AwsNetworkBuilder builder() {
@@ -46,32 +51,19 @@ public class AwsNetwork {
 
     public void defineInfrastructure() {
 
-        var vpc = new Vpc(namingStrategy.generateName(name), VpcArgs.builder().cidrBlock(range.toString()).build());
+        vpc = new Vpc(namingStrategy.generateName(name), VpcArgs.builder().cidrBlock(range.toString()).build());
 
         allSubnets().forEach(s -> s.defineInfrastructure(vpc));
-
-        defineVpcEndpoints(vpc);
-    }
-    private void defineVpcEndpoints(Vpc vpc) {
-
-        var region = AwsFunctions.getRegion();
-
-        var serviceName = region.applyValue(r -> String.format("com.amazonaws.%s.secretsmanager", r));
-
-        var subnetIds = Output.all(allSubnets().map(AwsSubnet::getId).toList());
-
-        new VpcEndpoint(namingStrategy.generateName(name), VpcEndpointArgs.builder()
-                .vpcEndpointType("Interface")
-                .vpcId(vpc.id())
-                .serviceName(serviceName)
-                .privateDnsEnabled(true)
-                .subnetIds(subnetIds)
-                .build());
     }
 
-    private Stream<AwsSubnet> allSubnets() {
+    Stream<AwsSubnet> allSubnets() {
 
         return subnetsByTier.values().stream().flatMap(Collection::stream);
+    }
+
+    public Output<String> getVpcId() {
+
+        return vpc.id();
     }
 
 
@@ -139,4 +131,8 @@ public class AwsNetwork {
         }
     }
 
+    public void allowAccessToSecretsManager(String forResource, SecurityGroup from) {
+
+        lazySecretsManagerEndpoint.get().allowHttpsAccessFrom(forResource, from);
+    }
 }

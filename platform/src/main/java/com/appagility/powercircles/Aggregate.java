@@ -50,7 +50,7 @@ public class Aggregate {
     private String commandHandlerArtifactName;
     private String commandHandlerName;
 
-    public void defineInfrastructure(RestApi restApi, List<AwsSubnet> dataSubnets) {
+    public void defineInfrastructure(RestApi restApi, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
 
         var eventStore = defineDynamoTable();
 
@@ -61,6 +61,7 @@ public class Aggregate {
         defineStreamFromEventStoreToEventBus(eventStore, eventBus);
 
         var rdsInstance = AwsRdsInstance.builder()
+                .awsNetwork(awsNetwork)
                 .awsSubnets(dataSubnets)
                 .name(name)
                 .username(PROJECTION_DATABASE_USERNAME)

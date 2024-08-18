@@ -30,6 +30,7 @@ import java.util.List;
 
 public class AwsRdsInstance {
 
+    private final AwsNetwork awsNetwork;
     private final List<AwsSubnet> awsSubnets;
 
     @Getter
@@ -47,8 +48,9 @@ public class AwsRdsInstance {
     private DatabaseSchemaInitializer databaseSchemaInitializer;
 
     @Builder
-    public AwsRdsInstance(List<AwsSubnet> awsSubnets, String name, String username) {
+    public AwsRdsInstance(AwsNetwork awsNetwork, List<AwsSubnet> awsSubnets, String name, String username) {
 
+        this.awsNetwork = awsNetwork;
         this.awsSubnets = awsSubnets;
         this.name = name;
         this.username = username;
@@ -127,6 +129,7 @@ public class AwsRdsInstance {
 
         databaseSchemaInitializer = DatabaseSchemaInitializer.builder()
                 .instance(this)
+                .awsNetwork(awsNetwork)
                 .dataSubnets(awsSubnets)
                 .build();
 

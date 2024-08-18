@@ -25,6 +25,7 @@ public class App {
 
             var application = new EventSourcingApplication.EventSourcingApplicationBuilder()
                     .name("PowerCircles")
+                    .awsNetwork(network)
                     .dataSubnets(dataSubnets)
                     .aggregate(Aggregate.builder()
                             .name("person")

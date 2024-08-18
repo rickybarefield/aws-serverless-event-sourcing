@@ -32,6 +32,7 @@ public class DatabaseSchemaInitializer {
     private static final Duration EXECUTOR_TIMEOUT = Duration.ofMinutes(2);
     private static final String RESOURCE_NAME = "schema-initializer";
 
+    private final AwsNetwork awsNetwork;
     private final List<AwsSubnet> dataSubnets;
     private final AwsRdsInstance instance;
 
@@ -60,6 +61,8 @@ public class DatabaseSchemaInitializer {
         var lambdaSecurityGroup = new SecurityGroup(instance.getName() + "-schema-initializer", SecurityGroupArgs.builder()
                 .vpcId(vpcId)
                 .build());
+
+        awsNetwork.allowAccessToSecretsManager(RESOURCE_NAME, lambdaSecurityGroup);
 
         instance.allowAccessFrom(RESOURCE_NAME, lambdaSecurityGroup);
 

@@ -20,6 +20,8 @@ public class EventSourcingApplication {
 
     private List<AwsSubnet> dataSubnets;
 
+    private AwsNetwork awsNetwork;
+
     public Output<String> defineInfrastructure() {
 
         var restApi = new RestApi("PowerCircles", RestApiArgs.builder()
@@ -28,7 +30,7 @@ public class EventSourcingApplication {
                         .build())
                 .build());
 
-        aggregates.forEach(a -> a.defineInfrastructure(restApi, dataSubnets));
+        aggregates.forEach(a -> a.defineInfrastructure(restApi, awsNetwork, dataSubnets));
 
         var integrations = aggregates.stream()
                 .flatMap(a -> a.getCommands().stream().map( c -> (Resource) c.getIntegration()))
