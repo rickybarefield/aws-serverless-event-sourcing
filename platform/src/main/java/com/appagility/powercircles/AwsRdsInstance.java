@@ -71,6 +71,7 @@ public class AwsRdsInstance {
                 .build()));
 
         new SecretVersion(name + "-projections-secret-version", SecretVersionArgs.builder()
+                .secretId(userPasswordSecret.get().id())
                 .secretString(userPassword.get().result())
                 .build());
     }
@@ -83,7 +84,7 @@ public class AwsRdsInstance {
     private void defineDatabase() {
 
 
-        var subnetIds = Output.all(awsSubnets.stream().map(s -> s.getId()).toList());
+        var subnetIds = Output.all(awsSubnets.stream().map(AwsSubnet::getId).toList());
 
         var subnetGroup = new SubnetGroup(name + "-projections", SubnetGroupArgs.builder()
                 .subnetIds(subnetIds)
@@ -166,7 +167,7 @@ public class AwsRdsInstance {
 
     }
 
-    public Policy createPolicyToConnect(String resourceName) {
+    public Policy createPolicyToConnectViaIam(String resourceName) {
 
         var regionAccountIdAndResourceIdOutputs = Output.all(
                 AwsFunctions.getRegion().applyValue(GetRegionResult::name),
@@ -192,24 +193,49 @@ public class AwsRdsInstance {
 
         return IamPolicyFunctions.policyForDocument(allowConnectToDatabase,
                 resourceName + "-connect-to-" + name);
+    }
+
+    public Policy createPolicyToGetRootUserSecret(String resourceName) {
+
+        var allowGetSecret = IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
+                        .statements(GetPolicyDocumentStatementArgs.builder()
+                                .effect(Statement.Effect.Allow.name())
+                                .actions("secretsmanager:GetResourcePolicy",
+                                        "secretsmanager:GetSecretValue",
+                                        "secretsmanager:DescribeSecret",
+                                        "secretsmanager:ListSecretVersionIds")
+                                .resources(userPasswordSecret.get().arn().applyValue(Collections::singletonList))
+                                .build(),
+                                GetPolicyDocumentStatementArgs.builder()
+                                        .effect(Statement.Effect.Allow.name())
+                                        .actions("secretsmanager:ListSecrets")
+                                        .resources("*")
+                                        .build())
+                .build());
+
+        return IamPolicyFunctions.policyForDocument(allowGetSecret,
+                resourceName + "-get-root-db-secret-" + name);
 
     }
 
     public Output<ConnectionDetails> getConnectionDetails() {
 
-        return ConnectionDetails.create(this);
+        return ConnectionDetails.create(this, userPasswordSecret.get());
     }
 
-    public record ConnectionDetails(String hostname, String port, String url) {
+    public record ConnectionDetails(String hostname, String port, String url, String secretName) {
 
-        private static Output<ConnectionDetails> create(AwsRdsInstance databaseInstance) {
+        private static Output<ConnectionDetails> create(AwsRdsInstance databaseInstance, Secret rootUserSecret) {
 
             return Output.all(databaseInstance.getAddress(),
-                            databaseInstance.getPort().applyValue(Object::toString))
-                    .applyValue(addressAndPort -> new ConnectionDetails(
-                            addressAndPort.get(0),
-                            addressAndPort.get(1),
-                            createUrl(addressAndPort.get(0), addressAndPort.get(1), databaseInstance.getDbName())));
+                            databaseInstance.getPort().applyValue(Object::toString),
+                            rootUserSecret.name())
+                    .applyValue(addressPortAndSecretName -> new ConnectionDetails(
+                            addressPortAndSecretName.get(0),
+                            addressPortAndSecretName.get(1),
+                            createUrl(addressPortAndSecretName.get(0), addressPortAndSecretName.get(1), databaseInstance.getDbName()),
+                            addressPortAndSecretName.get(2)
+                            ));
         }
 
         private static String createUrl(String address, String port, String dbName) {

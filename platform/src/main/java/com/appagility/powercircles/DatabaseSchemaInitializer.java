@@ -1,24 +1,17 @@
 package com.appagility.powercircles;
 
-import com.amazonaws.auth.policy.Statement;
 import com.appagility.aws.lambda.SqlExecutor;
 import com.pulumi.asset.FileArchive;
-import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.SecurityGroup;
 import com.pulumi.aws.ec2.SecurityGroupArgs;
-import com.pulumi.aws.iam.IamFunctions;
 import com.pulumi.aws.iam.Role;
 import com.pulumi.aws.iam.RoleArgs;
-import com.pulumi.aws.iam.inputs.GetPolicyDocumentArgs;
-import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
 import com.pulumi.aws.lambda.Function;
 import com.pulumi.aws.lambda.FunctionArgs;
 import com.pulumi.aws.lambda.enums.Runtime;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
 import com.pulumi.aws.lambda.inputs.FunctionVpcConfigArgs;
-import com.pulumi.aws.outputs.GetCallerIdentityResult;
-import com.pulumi.aws.outputs.GetRegionResult;
 import com.pulumi.aws.rds.Proxy;
 import com.pulumi.aws.rds.ProxyArgs;
 import com.pulumi.aws.rds.inputs.ProxyAuthArgs;
@@ -29,6 +22,8 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static com.appagility.powercircles.connectionfactories.RdsPostgresSecretAuthConnectionFactory.SECRET_NAME_ENV_VARIABLE;
 
 @Builder
 public class DatabaseSchemaInitializer {
@@ -58,7 +53,7 @@ public class DatabaseSchemaInitializer {
 
     private void defineLambdaForExecutingSql(Role lambdaRole) {
 
-        var subnetIds = Output.all(dataSubnets.stream().map(s -> s.getId()).toList());
+        var subnetIds = Output.all(dataSubnets.stream().map(AwsSubnet::getId).toList());
 
         var vpcId = dataSubnets.get(0).getVpcId();
 
@@ -82,7 +77,7 @@ public class DatabaseSchemaInitializer {
                                 .variables(Map.of("DB_URL", connectionDetails.url(),
                                         "DB_USERNAME", instance.getUsername(),
                                         "DB_PORT", connectionDetails.port(),
-                                        "DB_HOSTNAME", connectionDetails.hostname()))
+                                                SECRET_NAME_ENV_VARIABLE, connectionDetails.secretName()))
                                 .build()))
                 .vpcConfig(FunctionVpcConfigArgs.builder()
                         .subnetIds(subnetIds)
@@ -93,7 +88,7 @@ public class DatabaseSchemaInitializer {
 
     private Role defineRoleForLambda() {
 
-        var allowConnectToDatabasePolicy = instance.createPolicyToConnect(RESOURCE_NAME);
+        var allowConnectToDatabasePolicy = instance.createPolicyToGetRootUserSecret(RESOURCE_NAME);
 
         var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
 

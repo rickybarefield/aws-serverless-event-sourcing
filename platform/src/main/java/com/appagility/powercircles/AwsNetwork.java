@@ -4,7 +4,10 @@ import com.google.common.collect.Streams;
 import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.Vpc;
 import com.pulumi.aws.ec2.VpcArgs;
+import com.pulumi.aws.ec2.VpcEndpoint;
+import com.pulumi.aws.ec2.VpcEndpointArgs;
 import com.pulumi.aws.inputs.GetAvailabilityZonesPlainArgs;
+import com.pulumi.core.Output;
 import com.pulumi.core.Tuples;
 import inet.ipaddr.IPAddress;
 import lombok.SneakyThrows;
@@ -45,8 +48,32 @@ public class AwsNetwork {
 
         var vpc = new Vpc(namingStrategy.generateName(name), VpcArgs.builder().cidrBlock(range.toString()).build());
 
-        subnetsByTier.values().stream().flatMap(Collection::stream).forEach(s -> s.defineInfrastructure(vpc));
+        allSubnets().forEach(s -> s.defineInfrastructure(vpc));
+
+        defineVpcEndpoints(vpc);
     }
+    private void defineVpcEndpoints(Vpc vpc) {
+
+        var region = AwsFunctions.getRegion();
+
+        var serviceName = region.applyValue(r -> String.format("com.amazonaws.%s.secretsmanager", r));
+
+        var subnetIds = Output.all(allSubnets().map(AwsSubnet::getId).toList());
+
+        new VpcEndpoint(namingStrategy.generateName(name), VpcEndpointArgs.builder()
+                .vpcEndpointType("Interface")
+                .vpcId(vpc.id())
+                .serviceName(serviceName)
+                .privateDnsEnabled(true)
+                .subnetIds(subnetIds)
+                .build());
+    }
+
+    private Stream<AwsSubnet> allSubnets() {
+
+        return subnetsByTier.values().stream().flatMap(Collection::stream);
+    }
+
 
     public static class AwsNetworkBuilder {
 

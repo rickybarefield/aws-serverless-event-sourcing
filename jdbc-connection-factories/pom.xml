@@ -16,5 +16,9 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>rds</artifactId>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+        </dependency>
     </dependencies>
 </project>
