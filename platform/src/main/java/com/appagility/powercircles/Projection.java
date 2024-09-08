@@ -25,7 +25,7 @@ public class Projection {
     private String name;
 
     /**
-     * Schema resource must be within JAR containing projectionHandler
+     * Schema resource must be within the same package (directory) and JAR containing projectionHandler
      */
     private String schemaResourcePath;
     private Class<?> projectionHandler;

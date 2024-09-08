@@ -37,7 +37,7 @@ public class App {
                                     .name("Summary")
                                     .projectionHandlerArtifactName("power-circles-summary-projection.jar")
                                     .projectionHandler(LambdaEventHandler.class)
-                                    .schemaResourcePath("/schema.sql")
+                                    .schemaResourcePath("com/appagility/powercircles/summaryprojection/infrastructure/aws/schema.sql")
                                     .build())
                             .build())
                     .build();

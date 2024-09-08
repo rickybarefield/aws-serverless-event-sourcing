@@ -1,3 +1,6 @@
 name: power-circles
-runtime: java
+runtime:
+  name: java
+#  options:
+#    use-executor: "mvnDebug"
 description: AWS Platform for Power Circles

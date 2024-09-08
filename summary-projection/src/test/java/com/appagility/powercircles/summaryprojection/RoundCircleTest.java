@@ -16,7 +16,7 @@ public class RoundCircleTest {
     @BeforeAll
     public static void createDatabase() {
 
-        try (var schemaResource = SummaryProjection.class.getClassLoader().getResourceAsStream("schema.sql")) {
+        try (var schemaResource = SummaryProjection.class.getClassLoader().getResourceAsStream("com/appagility/powercircles/summaryprojection/infrastructure/aws/schema.sql")) {
 
             var schema = new String(schemaResource.readAllBytes(), StandardCharsets.UTF_8);
 
