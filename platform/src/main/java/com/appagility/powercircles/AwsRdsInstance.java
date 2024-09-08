@@ -25,6 +25,7 @@ import com.pulumi.random.RandomPasswordArgs;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -224,6 +225,11 @@ public class AwsRdsInstance {
     public Output<ConnectionDetails> getConnectionDetails() {
 
         return ConnectionDetails.create(this, userPasswordSecret.get());
+    }
+
+    public void exectuteAsSql(String logicalName, InputStream resourceContainingSql) {
+
+        databaseSchemaInitializer.execute(logicalName, resourceContainingSql);
     }
 
     public record ConnectionDetails(String hostname, String port, String url, String secretName) {

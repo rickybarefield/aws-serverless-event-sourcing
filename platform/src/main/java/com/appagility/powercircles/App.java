@@ -1,6 +1,7 @@
 package com.appagility.powercircles;
 
 import com.appagility.powercircles.commandhandlers.infrastructure.aws.PersonHandler;
+import com.appagility.powercircles.summaryprojection.infrastructure.aws.LambdaEventHandler;
 import com.pulumi.Pulumi;
 
 public class App {
@@ -32,7 +33,12 @@ public class App {
                             .commandHandlerName(PersonHandler.class.getName())
                             .commandHandlerArtifactName("power-circles-command-handlers.jar")
                             .command(Command.builder().name("Create").build())
-                            .projection(Projection.builder().name("Summary").schema("").build())
+                            .projection(Projection.builder()
+                                    .name("Summary")
+                                    .projectionHandlerArtifactName("power-circles-summary-projection.jar")
+                                    .projectionHandler(LambdaEventHandler.class)
+                                    .schemaResourcePath("/schema.sql")
+                                    .build())
                             .build())
                     .build();
 

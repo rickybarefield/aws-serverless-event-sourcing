@@ -28,6 +28,8 @@ public class RdsPostgresSecretAuthConnectionFactory extends RdsPostgresConnectio
 
         var secretName = System.getenv(SECRET_NAME_ENV_VARIABLE);
 
+        LOG.debug("Loading secret value");
+
         try(var client = SecretsManagerClient.builder()
                 .region(getRegion())
                 .build()) {

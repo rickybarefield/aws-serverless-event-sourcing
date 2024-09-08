@@ -7,7 +7,6 @@ import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementConditionArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementPrincipalArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
-import com.pulumi.aws.rds.Instance;
 import com.pulumi.aws.sns.Topic;
 import com.pulumi.aws.sns.TopicSubscription;
 import com.pulumi.aws.sns.TopicSubscriptionArgs;
@@ -17,14 +16,20 @@ import com.pulumi.aws.sqs.QueuePolicy;
 import com.pulumi.aws.sqs.QueuePolicyArgs;
 import lombok.Builder;
 
+import java.io.IOException;
 import java.util.List;
 
 @Builder
 public class Projection {
 
     private String name;
-    private String schema;
-    private String projectionHandlerName;
+
+    /**
+     * Schema resource must be within JAR containing projectionHandler
+     */
+    private String schemaResourcePath;
+    private Class<?> projectionHandler;
+    private String projectionHandlerArtifactName;
 
     public void defineInfrastructureAndSubscribeToEventBus(Topic eventBus,
                                                            AwsRdsInstance projectionsInstance) {
@@ -32,8 +37,20 @@ public class Projection {
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
 
+        defineSchema(projectionsInstance);
 
+    }
 
+    private void defineSchema(AwsRdsInstance projectionsInstance) {
+
+        try(var schemaResource = projectionHandler.getClassLoader().getResourceAsStream(schemaResourcePath)) {
+
+            projectionsInstance.exectuteAsSql(name + "-schema", schemaResource);
+
+        } catch (IOException e) {
+
+            throw new RuntimeException(e);
+        }
     }
 
     private Queue defineQueue() {

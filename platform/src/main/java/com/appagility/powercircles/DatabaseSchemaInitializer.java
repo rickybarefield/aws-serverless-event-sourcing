@@ -1,6 +1,9 @@
 package com.appagility.powercircles;
 
 import com.appagility.aws.lambda.SqlExecutor;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.pulumi.asset.FileArchive;
 import com.pulumi.aws.ec2.SecurityGroup;
 import com.pulumi.aws.ec2.SecurityGroupArgs;
@@ -9,6 +12,8 @@ import com.pulumi.aws.iam.RoleArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
 import com.pulumi.aws.lambda.Function;
 import com.pulumi.aws.lambda.FunctionArgs;
+import com.pulumi.aws.lambda.Invocation;
+import com.pulumi.aws.lambda.InvocationArgs;
 import com.pulumi.aws.lambda.enums.Runtime;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
 import com.pulumi.aws.lambda.inputs.FunctionVpcConfigArgs;
@@ -17,7 +22,11 @@ import com.pulumi.aws.rds.ProxyArgs;
 import com.pulumi.aws.rds.inputs.ProxyAuthArgs;
 import com.pulumi.core.Output;
 import lombok.Builder;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +44,8 @@ public class DatabaseSchemaInitializer {
     private final AwsNetwork awsNetwork;
     private final List<AwsSubnet> dataSubnets;
     private final AwsRdsInstance instance;
+
+    private Function sqlExecutor;
 
     public void defineInfrastructure() {
 
@@ -68,7 +79,7 @@ public class DatabaseSchemaInitializer {
 
         var securityGroupIds = lambdaSecurityGroup.id().applyValue(Collections::singletonList);
 
-        new Function(instance.getName() + "-" + RESOURCE_NAME, FunctionArgs
+        sqlExecutor = new Function(instance.getName() + "-" + RESOURCE_NAME, FunctionArgs
                 .builder()
                 .runtime(Runtime.Java21)
                 .handler(SqlExecutor.class.getName())
@@ -103,4 +114,28 @@ public class DatabaseSchemaInitializer {
                 .build());
     }
 
+    public void execute(String logicalName, InputStream resourceContainingSql) {
+
+        try {
+
+            var sqlString = IOUtils.toString(resourceContainingSql);
+
+
+            var gson = new Gson();
+
+            var input = new JsonObject();
+            input.add("sql", new JsonPrimitive(sqlString));
+
+            new Invocation(instance.getName() + "-" + logicalName, InvocationArgs.builder()
+                    .functionName(sqlExecutor.name())
+                    .input(gson.toJson(input))
+                    .build()
+            );
+
+        } catch (IOException e) {
+
+            throw new RuntimeException(e);
+        }
+
+    }
 }
