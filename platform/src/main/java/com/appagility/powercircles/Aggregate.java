@@ -4,7 +4,6 @@ import com.amazonaws.auth.policy.Statement;
 import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.StreamViewType;
 import com.pulumi.asset.AssetArchive;
-import com.pulumi.asset.FileArchive;
 import com.pulumi.asset.StringAsset;
 import com.pulumi.aws.apigateway.RestApi;
 import com.pulumi.aws.dynamodb.Table;
@@ -48,7 +47,7 @@ public class Aggregate {
     private List<Projection> projections;
 
     private String commandHandlerArtifactName;
-    private String commandHandlerName;
+    private Class<?> commandHandler;
 
     public void defineInfrastructure(RestApi restApi, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
 
@@ -166,17 +165,20 @@ public class Aggregate {
 
         var lambdaRole = defineRoleForLambda(eventStore);
 
-        var function = new Function(name, FunctionArgs
-                .builder()
-                .runtime(Runtime.Java21)
-                .handler(commandHandlerName)
-                .role(lambdaRole.arn())
-                .code(new FileArchive("./target/lambdas/" + commandHandlerArtifactName))
-                .timeout((int) LAMBDA_TIMEOUT.toSeconds())
-                .environment(eventStore.name().applyValue(
-                        tableName -> FunctionEnvironmentArgs.builder()
-                                .variables(Map.of("PERSON_TABLE_NAME", tableName)).build()))
-                .build());
+
+        var environment = eventStore.name().applyValue(
+                tableName -> FunctionEnvironmentArgs.builder()
+                        .variables(Map.of("PERSON_TABLE_NAME", tableName)).build());
+
+
+        var function = JavaLambda.builder()
+                .name(name)
+                .artifactName(commandHandlerArtifactName)
+                .handler(commandHandler)
+                .environment(environment)
+                .role(lambdaRole)
+                .build()
+                .define();
 
         new Permission("allow_invoke_from_restapi", PermissionArgs.builder()
                 .action("lambda:InvokeFunction")

@@ -2,6 +2,8 @@ package com.appagility.powercircles;
 
 import com.amazonaws.auth.policy.Statement;
 import com.pulumi.aws.iam.IamFunctions;
+import com.pulumi.aws.iam.Role;
+import com.pulumi.aws.iam.RoleArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementConditionArgs;
@@ -36,9 +38,8 @@ public class Projection {
 
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
-
         defineSchema(projectionsInstance);
-
+        defineProjectionHandlerLambda();
     }
 
     private void defineSchema(AwsRdsInstance projectionsInstance) {
@@ -68,6 +69,7 @@ public class Projection {
     }
 
     private void defineQueuePolicyToAllowSnsToSend(Queue projectionQueue, Topic eventBus) {
+
         var policyDocument = IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
                 .statements(GetPolicyDocumentStatementArgs.builder()
                         .effect(Statement.Effect.Allow.name())
@@ -99,4 +101,28 @@ public class Projection {
                 .protocol("sqs")
                 .build());
     }
+
+    private void defineProjectionHandlerLambda() {
+
+        var lambdaRole = defineRoleForLambda();
+
+        JavaLambda.builder()
+                .name(name)
+                .artifactName(projectionHandlerArtifactName)
+                .handler(projectionHandler)
+                .role(lambdaRole)
+                .build()
+                .define();
+    }
+
+    private Role defineRoleForLambda() {
+
+        var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
+
+        return new Role("lambda-role-" + name, new RoleArgs.Builder()
+                .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
+                .managedPolicyArns(List.of("arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"))
+                .build());
+    }
+
 }

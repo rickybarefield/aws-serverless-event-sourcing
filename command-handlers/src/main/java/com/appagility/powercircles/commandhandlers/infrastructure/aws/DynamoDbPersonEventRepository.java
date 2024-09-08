@@ -21,7 +21,7 @@ public class DynamoDbPersonEventRepository implements PersonEventRepository, Per
 
     public static final String TABLE_NAME = System.getenv("PERSON_TABLE_NAME");
     public static final String TYPE_KEY = "_type";
-    public static final String PERSON_ID_KEY = "personId";
+    public static final String PERSON_ID_KEY = "id";
     public static final String SEQUENCE_NUMBER_KEY = "sequenceNumber";
     public static final String DETAIL_KEY = "detail";
     final DynamoDB dynamo = new DynamoDB(AmazonDynamoDBClientBuilder.defaultClient());
