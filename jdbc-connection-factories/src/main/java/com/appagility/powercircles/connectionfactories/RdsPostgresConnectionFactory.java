@@ -16,7 +16,8 @@ public abstract class RdsPostgresConnectionFactory extends ConnectionFactory {
 
     private static final String DB_USERNAME_ENV_VARIABLE = "DB_USERNAME";
     private static final String DB_URL_ENV_VARIABLE = "DB_URL";
-    private static final String SSL_CERTIFICATE = "eu-west-1-bundle.pem";
+    private static final String RDS_CERTIFICATE_BUNDLE = "rds-eu-west-1-bundle.pem";
+    private static final String ROOT_CA_CERTIFICATE = "amazon-root-ca-1.crt";
     private static final String KEY_STORE_TYPE = "JKS";
     private static final String KEY_STORE_PROVIDER = "SUN";
     private static final String KEY_STORE_FILE_PREFIX = "sys-connect-via-ssl-test-cacerts";
@@ -67,7 +68,9 @@ public abstract class RdsPostgresConnectionFactory extends ConnectionFactory {
 
         try {
 
-            return createKeyStoreFile(createCertificate()).getPath();
+            return createKeyStoreFile(
+                    createCertificate(RDS_CERTIFICATE_BUNDLE),
+                    createCertificate(ROOT_CA_CERTIFICATE)).getPath();
 
         } catch (Exception e) {
 
@@ -75,10 +78,10 @@ public abstract class RdsPostgresConnectionFactory extends ConnectionFactory {
         }
     }
 
-    private static X509Certificate createCertificate() throws Exception {
+    private static X509Certificate createCertificate(String path) throws Exception {
 
         CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
-        URL url = new File(SSL_CERTIFICATE).toURI().toURL();
+        URL url = new File(path).toURI().toURL();
         if (url == null) {
 
             throw new Exception();
@@ -89,7 +92,7 @@ public abstract class RdsPostgresConnectionFactory extends ConnectionFactory {
         }
     }
 
-    private static File createKeyStoreFile(X509Certificate rootX509Certificate) throws Exception {
+    private static File createKeyStoreFile(X509Certificate... rootX509Certificates) throws Exception {
 
         File keyStoreFile = File.createTempFile(KEY_STORE_FILE_PREFIX, KEY_STORE_FILE_SUFFIX);
 
@@ -97,7 +100,10 @@ public abstract class RdsPostgresConnectionFactory extends ConnectionFactory {
 
             KeyStore ks = KeyStore.getInstance(KEY_STORE_TYPE, KEY_STORE_PROVIDER);
             ks.load(null);
-            ks.setCertificateEntry("rootCaCertificate", rootX509Certificate);
+            for(int i = 0 ; i < rootX509Certificates.length; i++) {
+
+                ks.setCertificateEntry("rootCaCertificate-" + i, rootX509Certificates[i]);
+            }
             ks.store(fos, DEFAULT_KEY_STORE_PASSWORD.toCharArray());
         }
         return keyStoreFile;

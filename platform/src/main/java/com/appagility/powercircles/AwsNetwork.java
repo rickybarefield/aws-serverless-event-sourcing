@@ -51,7 +51,11 @@ public class AwsNetwork {
 
     public void defineInfrastructure() {
 
-        vpc = new Vpc(namingStrategy.generateName(name), VpcArgs.builder().cidrBlock(range.toString()).build());
+        vpc = new Vpc(namingStrategy.generateName(name), VpcArgs.builder()
+                .cidrBlock(range.toString())
+                .enableDnsHostnames(true)
+                .enableDnsSupport(true)
+                .build());
 
         allSubnets().forEach(s -> s.defineInfrastructure(vpc));
     }

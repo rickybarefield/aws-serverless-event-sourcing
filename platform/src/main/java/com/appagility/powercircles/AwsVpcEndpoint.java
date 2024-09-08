@@ -50,7 +50,7 @@ public class AwsVpcEndpoint {
                 .vpcEndpointType("Interface")
                 .vpcId(awsNetwork.getVpcId())
                 .serviceName(serviceName)
-//                .privateDnsEnabled(true)
+                .privateDnsEnabled(true)
                 .subnetIds(subnetIds)
                 .securityGroupIds(securityGroup.id().applyValue(Collections::singletonList))
                 .build());

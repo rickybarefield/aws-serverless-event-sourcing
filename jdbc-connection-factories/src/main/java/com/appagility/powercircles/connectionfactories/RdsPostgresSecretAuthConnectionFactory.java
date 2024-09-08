@@ -36,8 +36,6 @@ public class RdsPostgresSecretAuthConnectionFactory extends RdsPostgresConnectio
                     .secretId(secretName)
                     .build());
 
-            LOG.warn("Secret values loaded: " + secretValue + " DELETE THIS LOG STATEMENT!!!");
-
             return secretValue.secretString();
         }
     }
