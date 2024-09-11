@@ -1,5 +1,6 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.networking;
 
+import com.appagility.powercircles.NamingStrategy;
 import com.google.common.collect.Streams;
 import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.SecurityGroup;

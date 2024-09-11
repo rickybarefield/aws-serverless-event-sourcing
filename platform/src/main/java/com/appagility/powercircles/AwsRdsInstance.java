@@ -1,6 +1,8 @@
 package com.appagility.powercircles;
 
 import com.amazonaws.auth.policy.Statement;
+import com.appagility.powercircles.networking.AwsNetwork;
+import com.appagility.powercircles.networking.AwsSubnet;
 import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.SecurityGroup;
 import com.pulumi.aws.ec2.SecurityGroupArgs;
@@ -71,6 +73,11 @@ public class AwsRdsInstance {
 
         userPassword.set(new RandomPassword(name + "-projections-user-password", RandomPasswordArgs.builder()
                 .length(32)
+                .lower(true)
+                .upper(true)
+                .numeric(true)
+                .overrideSpecial(";<?=:[]{}|")
+                .minSpecial(3)
                 .build()));
 
         new SecretVersion(name + "-projections-secret-version", SecretVersionArgs.builder()

@@ -1,6 +1,8 @@
 package com.appagility.powercircles;
 
 import com.appagility.powercircles.commandhandlers.infrastructure.aws.PersonHandler;
+import com.appagility.powercircles.networking.AwsNetwork;
+import com.appagility.powercircles.networking.NetworkingInputs;
 import com.appagility.powercircles.summaryprojection.infrastructure.aws.LambdaEventHandler;
 import com.pulumi.Pulumi;
 

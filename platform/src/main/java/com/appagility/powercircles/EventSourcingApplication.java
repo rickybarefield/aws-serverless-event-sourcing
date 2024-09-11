@@ -1,5 +1,7 @@
 package com.appagility.powercircles;
 
+import com.appagility.powercircles.networking.AwsNetwork;
+import com.appagility.powercircles.networking.AwsSubnet;
 import com.pulumi.aws.apigateway.*;
 import com.pulumi.aws.apigateway.inputs.RestApiEndpointConfigurationArgs;
 import com.pulumi.core.Output;

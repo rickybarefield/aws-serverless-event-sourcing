@@ -3,6 +3,8 @@ package com.appagility.powercircles;
 import com.amazonaws.auth.policy.Statement;
 import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.StreamViewType;
+import com.appagility.powercircles.networking.AwsNetwork;
+import com.appagility.powercircles.networking.AwsSubnet;
 import com.pulumi.asset.AssetArchive;
 import com.pulumi.asset.StringAsset;
 import com.pulumi.aws.apigateway.RestApi;

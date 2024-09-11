@@ -1,4 +1,4 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.networking;
 
 import com.pulumi.Context;
 import inet.ipaddr.IPAddress;

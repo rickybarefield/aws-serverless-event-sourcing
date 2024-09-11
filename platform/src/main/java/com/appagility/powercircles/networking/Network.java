@@ -1,4 +1,4 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.networking;
 
 public class Network {
 

@@ -9,6 +9,9 @@ import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementConditionArgs;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentStatementPrincipalArgs;
 import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
+import com.pulumi.aws.lambda.EventSourceMapping;
+import com.pulumi.aws.lambda.EventSourceMappingArgs;
+import com.pulumi.aws.lambda.Function;
 import com.pulumi.aws.sns.Topic;
 import com.pulumi.aws.sns.TopicSubscription;
 import com.pulumi.aws.sns.TopicSubscriptionArgs;
@@ -20,6 +23,9 @@ import lombok.Builder;
 
 import java.io.IOException;
 import java.util.List;
+
+import static com.appagility.powercircles.ManagedPolicies.LambdaBasicExecution;
+import static com.appagility.powercircles.ManagedPolicies.LambdaSqaQueueExection;
 
 @Builder
 public class Projection {
@@ -39,7 +45,9 @@ public class Projection {
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
         defineSchema(projectionsInstance);
-        defineProjectionHandlerLambda();
+        var projectionLambda = defineProjectionHandlerLambda();
+
+        connectQueueToLambda(projectionQueue, projectionLambda);
     }
 
     private void defineSchema(AwsRdsInstance projectionsInstance) {
@@ -102,11 +110,11 @@ public class Projection {
                 .build());
     }
 
-    private void defineProjectionHandlerLambda() {
+    private Function defineProjectionHandlerLambda() {
 
         var lambdaRole = defineRoleForLambda();
 
-        JavaLambda.builder()
+        return JavaLambda.builder()
                 .name(name)
                 .artifactName(projectionHandlerArtifactName)
                 .handler(projectionHandler)
@@ -121,8 +129,16 @@ public class Projection {
 
         return new Role("lambda-role-" + name, new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
-                .managedPolicyArns(List.of("arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"))
+                .managedPolicyArns(List.of(LambdaBasicExecution.getArn(), LambdaSqaQueueExection.getArn()))
                 .build());
     }
 
+    private void connectQueueToLambda(Queue projectionQueue, Function projectionLambda) {
+
+        new EventSourceMapping(name + "-subscription", EventSourceMappingArgs.builder()
+                .batchSize(1)
+                .eventSourceArn(projectionQueue.arn())
+                .functionName(projectionLambda.arn())
+                .build());
+    }
 }

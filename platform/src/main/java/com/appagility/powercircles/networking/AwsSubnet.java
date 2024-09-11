@@ -1,5 +1,7 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.networking;
 
+import com.appagility.powercircles.MayBecome;
+import com.appagility.powercircles.NamingStrategy;
 import com.pulumi.aws.ec2.Subnet;
 import com.pulumi.aws.ec2.SubnetArgs;
 import com.pulumi.aws.ec2.Vpc;
