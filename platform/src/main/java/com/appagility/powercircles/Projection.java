@@ -22,7 +22,9 @@ import com.pulumi.aws.sqs.QueuePolicyArgs;
 import lombok.Builder;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static com.appagility.powercircles.ManagedPolicies.LambdaBasicExecution;
 import static com.appagility.powercircles.ManagedPolicies.LambdaSqaQueueExection;
@@ -66,6 +68,8 @@ public class Projection {
 
         return new Queue(name + "-projection", new QueueArgs.Builder()
                 .fifoQueue(true)
+                //TODO Temporary to avoid failures costing money, should look at DLQ instead
+                .messageRetentionSeconds(60)
                 .contentBasedDeduplication(true)
                 .visibilityTimeoutSeconds((int) Aggregate.LAMBDA_TIMEOUT.toSeconds()).build());
     }
