@@ -40,7 +40,7 @@ public class Person implements PersonEventVisitor {
 
     public void visit(PersonCreatedEvent personCreatedEvent) {
 
-        this.id = personCreatedEvent.getPersonId();
+        this.id = personCreatedEvent.getId();
         this.name = personCreatedEvent.getDetail().getName();
     }
 

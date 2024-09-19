@@ -16,7 +16,7 @@ import lombok.Getter;
 public abstract class PersonEvent<TDetail extends PersonEventDetail> {
 
     @Getter
-    private final String personId;
+    private final String id;
     @Getter
     private final int sequenceNumber;
     @Getter

@@ -89,7 +89,7 @@ public class DynamoDbPersonEventRepository implements PersonEventRepository, Per
 
             var item = new Item()
                     .withString(TYPE_KEY, PersonCreatedEvent.TYPE)
-                    .withString(PERSON_ID_KEY, personCreatedEvent.getPersonId())
+                    .withString(PERSON_ID_KEY, personCreatedEvent.getId())
                     .withInt(SEQUENCE_NUMBER_KEY, personCreatedEvent.getSequenceNumber())
                     .withJSON(DETAIL_KEY, detail);
 

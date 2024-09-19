@@ -38,7 +38,7 @@ is created, the following sequence of events takes place:
 
 ### Diagram
 
-* [ ] Update to show need for lambda to get from dynamodb stream to SNS
+* [x] Update to show need for lambda to get from dynamodb stream to SNS
 
 ### Platform
 
@@ -52,11 +52,13 @@ is created, the following sequence of events takes place:
 ### Projection
 
 * [ ] Create one!
+* [ ] Add query handler
+* [ ] Create projection after an upgrade which uses replay functionality
 
 ### Command Handlers
 
 * [ ] Events should probably have a date/time on them too
-* [ ] Add Dependency injection (Dagger?) to command handlers
+* [ ] Add Dependency injection (Dagger?) to command handlers and projection handlers
 * [ ] Create a second command and event
 
 ### Testing
@@ -65,3 +67,7 @@ is created, the following sequence of events takes place:
 * [ ] Unit tests for command handlers and projections
 * [ ] Unit tests for platform?
 * [ ] Overall integration tests
+
+## Further Potential
+
+* [ ] Annotation driven handlers and projections - Java code could be scanned to determine what platform code to build

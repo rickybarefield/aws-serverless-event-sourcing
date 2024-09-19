@@ -14,7 +14,7 @@ public class PersonSummaryEventHandler implements PersonEventVisitor {
     public void visit(PersonCreatedEvent personCreatedEvent) {
 
             var summary = PersonSummary.builder()
-                    .personId(personCreatedEvent.getPersonId())
+                    .personId(personCreatedEvent.getId())
                     .name(personCreatedEvent.getDetail().getName())
                     .build();
 
