@@ -2,7 +2,7 @@ package com.appagility.powercircles.summaryprojection.infrastructure.aws;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
-import com.appagility.powercircles.connectionfactories.RdsPostgresIamAuthConnectionFactory;
+import com.appagility.powercircles.connectionfactories.RdsPostgresSecretAuthConnectionFactory;
 import com.appagility.powercircles.domain.events.PersonEvent;
 import com.appagility.powercircles.summaryprojection.PersonSummaryDao;
 import com.appagility.powercircles.summaryprojection.PersonSummaryEventHandler;
@@ -19,7 +19,7 @@ import java.io.OutputStream;
 public class LambdaEventHandler implements RequestStreamHandler {
 
     private PersonSummaryEventHandler eventHandler =
-            new PersonSummaryEventHandler(new PersonSummaryDao(new RdsPostgresIamAuthConnectionFactory()));
+            new PersonSummaryEventHandler(new PersonSummaryDao(new RdsPostgresSecretAuthConnectionFactory()));
 
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {

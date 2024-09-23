@@ -68,6 +68,17 @@ is created, the following sequence of events takes place:
 * [ ] Unit tests for platform?
 * [ ] Overall integration tests
 
+## Optimisation
+
+* [ ] Consider compiler options (C1)
+* [ ] Consider SnapStart
+* [ ] Consider lambda layers
+* [ ] RDS Proxy
+
+## Security
+
+* [ ] Limit user roles in database for projections
+
 ## Further Potential
 
 * [ ] Annotation driven handlers and projections - Java code could be scanned to determine what platform code to build

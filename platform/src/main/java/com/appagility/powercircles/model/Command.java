@@ -1,4 +1,4 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.model;
 
 import com.pulumi.aws.apigateway.*;
 import com.pulumi.aws.lambda.Function;

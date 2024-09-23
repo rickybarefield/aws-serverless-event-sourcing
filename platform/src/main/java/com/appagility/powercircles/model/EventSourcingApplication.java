@@ -1,4 +1,4 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.model;
 
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.AwsSubnet;
@@ -7,12 +7,13 @@ import com.pulumi.aws.apigateway.inputs.RestApiEndpointConfigurationArgs;
 import com.pulumi.core.Output;
 import com.pulumi.resources.CustomResourceOptions;
 import com.pulumi.resources.Resource;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Singular;
 
 import java.util.List;
 
-@Builder
+@Builder(access = AccessLevel.PUBLIC)
 public class EventSourcingApplication {
 
     private String name;

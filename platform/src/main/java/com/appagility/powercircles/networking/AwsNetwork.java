@@ -1,6 +1,7 @@
 package com.appagility.powercircles.networking;
 
-import com.appagility.powercircles.NamingStrategy;
+import com.appagility.powercircles.common.MayBecome;
+import com.appagility.powercircles.common.NamingStrategy;
 import com.google.common.collect.Streams;
 import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.SecurityGroup;
@@ -13,7 +14,6 @@ import inet.ipaddr.IPAddress;
 import lombok.SneakyThrows;
 
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,7 +28,7 @@ public class AwsNetwork {
     private final Map<String, List<AwsSubnet>> subnetsByTier;
     private Vpc vpc;
 
-    private Supplier<AwsVpcEndpoint> lazySecretsManagerEndpoint;
+    private final MayBecome<AwsVpcEndpoint> secretsManagerEndpoint = MayBecome.empty("secretsManagerEndpoint");
 
     public AwsNetwork(NamingStrategy namingStrategy, String name, IPAddress range, Map<String, List<AwsSubnet>> subnetsByTier) {
 
@@ -36,8 +36,6 @@ public class AwsNetwork {
         this.name = name;
         this.range = range;
         this.subnetsByTier = subnetsByTier;
-
-        this.lazySecretsManagerEndpoint = () -> AwsVpcEndpoint.define(namingStrategy, this, "secretsmanager");
     }
 
     public static AwsNetworkBuilder builder() {
@@ -138,6 +136,15 @@ public class AwsNetwork {
 
     public void allowAccessToSecretsManager(String forResource, SecurityGroup from) {
 
-        lazySecretsManagerEndpoint.get().allowHttpsAccessFrom(forResource, from);
+        defineSecretsManagerEndpointIfNotDefined();
+
+        secretsManagerEndpoint.get().allowHttpsAccessFrom(forResource, from);
+    }
+
+    private void defineSecretsManagerEndpointIfNotDefined() {
+
+        if(!secretsManagerEndpoint.isSet()) {
+            secretsManagerEndpoint.set(AwsVpcEndpoint.define(namingStrategy, this, "secretsmanager"));
+        }
     }
 }

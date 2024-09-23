@@ -1,6 +1,14 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.model;
 
 import com.amazonaws.auth.policy.Statement;
+import com.appagility.powercircles.common.IamPolicyFunctions;
+import com.appagility.powercircles.networking.AwsNetwork;
+import com.appagility.powercircles.networking.AwsSubnet;
+import com.appagility.powercircles.wrappers.AwsRdsInstance;
+import com.appagility.powercircles.wrappers.JavaLambda;
+import com.appagility.powercircles.wrappers.RdsUser;
+import com.pulumi.aws.ec2.SecurityGroup;
+import com.pulumi.aws.ec2.SecurityGroupArgs;
 import com.pulumi.aws.iam.IamFunctions;
 import com.pulumi.aws.iam.Role;
 import com.pulumi.aws.iam.RoleArgs;
@@ -12,6 +20,8 @@ import com.pulumi.aws.iam.outputs.GetPolicyDocumentResult;
 import com.pulumi.aws.lambda.EventSourceMapping;
 import com.pulumi.aws.lambda.EventSourceMappingArgs;
 import com.pulumi.aws.lambda.Function;
+import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
+import com.pulumi.aws.lambda.inputs.FunctionVpcConfigArgs;
 import com.pulumi.aws.sns.Topic;
 import com.pulumi.aws.sns.TopicSubscription;
 import com.pulumi.aws.sns.TopicSubscriptionArgs;
@@ -19,15 +29,16 @@ import com.pulumi.aws.sqs.Queue;
 import com.pulumi.aws.sqs.QueueArgs;
 import com.pulumi.aws.sqs.QueuePolicy;
 import com.pulumi.aws.sqs.QueuePolicyArgs;
+import com.pulumi.core.Output;
 import lombok.Builder;
 
 import java.io.IOException;
-import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
-import static com.appagility.powercircles.ManagedPolicies.LambdaBasicExecution;
-import static com.appagility.powercircles.ManagedPolicies.LambdaSqaQueueExection;
+import static com.appagility.powercircles.common.ManagedPolicies.*;
+import static com.appagility.powercircles.connectionfactories.RdsPostgresSecretAuthConnectionFactory.SECRET_NAME_ENV_VARIABLE;
 
 @Builder
 public class Projection {
@@ -42,12 +53,15 @@ public class Projection {
     private String projectionHandlerArtifactName;
 
     public void defineInfrastructureAndSubscribeToEventBus(Topic eventBus,
-                                                           AwsRdsInstance projectionsInstance) {
+                                                           AwsRdsInstance projectionsInstance,
+                                                           AwsNetwork awsNetwork,
+                                                           List<AwsSubnet> dataSubnets) {
 
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
         defineSchema(projectionsInstance);
-        var projectionLambda = defineProjectionHandlerLambda();
+        var rdsUser = projectionsInstance.createUser(name);
+        var projectionLambda = defineProjectionHandlerLambda(projectionsInstance, rdsUser, awsNetwork, dataSubnets);
 
         connectQueueToLambda(projectionQueue, projectionLambda);
     }
@@ -114,26 +128,55 @@ public class Projection {
                 .build());
     }
 
-    private Function defineProjectionHandlerLambda() {
+    private Function defineProjectionHandlerLambda(AwsRdsInstance instance, RdsUser rdsUser, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
 
-        var lambdaRole = defineRoleForLambda();
+        var subnetIds = Output.all(dataSubnets.stream().map(AwsSubnet::getId).toList());
+
+        var vpcId = dataSubnets.get(0).getVpcId();
+
+        var lambdaSecurityGroup = new SecurityGroup(name, SecurityGroupArgs.builder()
+                .vpcId(vpcId)
+                .build());
+
+        awsNetwork.allowAccessToSecretsManager(name, lambdaSecurityGroup);
+
+        instance.allowAccessFrom(name, lambdaSecurityGroup);
+
+        var securityGroupIds = lambdaSecurityGroup.id().applyValue(Collections::singletonList);
+
+        var lambdaRole = defineRoleForLambda(rdsUser);
 
         return JavaLambda.builder()
                 .name(name)
                 .artifactName(projectionHandlerArtifactName)
                 .handler(projectionHandler)
                 .role(lambdaRole)
+                .environment(instance.getConnectionDetails(rdsUser).applyValue(
+                        connectionDetails -> FunctionEnvironmentArgs.builder()
+                                .variables(Map.of("DB_URL", connectionDetails.url(),
+                                        "DB_USERNAME", connectionDetails.username(),
+                                        "DB_PORT", connectionDetails.port(),
+                                        SECRET_NAME_ENV_VARIABLE, connectionDetails.secretName()))
+                                .build()))
+                .vpcConfig(FunctionVpcConfigArgs.builder()
+                        .subnetIds(subnetIds)
+                        .securityGroupIds(securityGroupIds)
+                        .build())
                 .build()
                 .define();
     }
 
-    private Role defineRoleForLambda() {
+    private Role defineRoleForLambda(RdsUser user) {
 
         var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
+        var allowConnectToDatabasePolicy = user.createPolicyToGetSecret(name);
 
         return new Role("lambda-role-" + name, new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
-                .managedPolicyArns(List.of(LambdaBasicExecution.getArn(), LambdaSqaQueueExection.getArn()))
+                .managedPolicyArns(allowConnectToDatabasePolicy.arn().applyValue(rdsSecretPolicy ->
+                                List.of(LambdaVpcAccessExecution.getArn(),
+                                        LambdaSqaQueueExecution.getArn(),
+                                        rdsSecretPolicy)))
                 .build());
     }
 

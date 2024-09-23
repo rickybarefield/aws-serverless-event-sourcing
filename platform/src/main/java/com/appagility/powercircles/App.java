@@ -1,6 +1,11 @@
 package com.appagility.powercircles;
 
 import com.appagility.powercircles.commandhandlers.infrastructure.aws.PersonHandler;
+import com.appagility.powercircles.common.ContextNamingStrategy;
+import com.appagility.powercircles.model.Aggregate;
+import com.appagility.powercircles.model.Command;
+import com.appagility.powercircles.model.EventSourcingApplication;
+import com.appagility.powercircles.model.Projection;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.NetworkingInputs;
 import com.appagility.powercircles.summaryprojection.infrastructure.aws.LambdaEventHandler;
@@ -26,7 +31,7 @@ public class App {
 
             var dataSubnets = network.getSubnets("data");
 
-            var application = new EventSourcingApplication.EventSourcingApplicationBuilder()
+            var application = EventSourcingApplication.builder()
                     .name("PowerCircles")
                     .awsNetwork(network)
                     .dataSubnets(dataSubnets)

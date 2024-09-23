@@ -1,4 +1,4 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.common;
 
 import com.amazonaws.auth.policy.Statement;
 import com.pulumi.aws.iam.IamFunctions;

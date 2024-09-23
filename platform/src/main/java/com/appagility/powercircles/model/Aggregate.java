@@ -1,10 +1,13 @@
-package com.appagility.powercircles;
+package com.appagility.powercircles.model;
 
 import com.amazonaws.auth.policy.Statement;
 import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.StreamViewType;
+import com.appagility.powercircles.common.IamPolicyFunctions;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.AwsSubnet;
+import com.appagility.powercircles.wrappers.AwsRdsInstance;
+import com.appagility.powercircles.wrappers.JavaLambda;
 import com.pulumi.asset.AssetArchive;
 import com.pulumi.asset.StringAsset;
 import com.pulumi.aws.apigateway.RestApi;
@@ -71,7 +74,7 @@ public class Aggregate {
         rdsInstance.defineInfrastructure();
 
         commands.forEach(c -> c.defineRouteAndConnectToCommandBus(restApi, commandHandler));
-        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, rdsInstance));
+        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, rdsInstance, awsNetwork, dataSubnets));
     }
 
     private Topic defineTopicForEventBus() {

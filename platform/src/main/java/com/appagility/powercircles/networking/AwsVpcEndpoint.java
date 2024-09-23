@@ -1,6 +1,6 @@
 package com.appagility.powercircles.networking;
 
-import com.appagility.powercircles.NamingStrategy;
+import com.appagility.powercircles.common.NamingStrategy;
 import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.*;
 import com.pulumi.aws.ec2.enums.ProtocolType;
