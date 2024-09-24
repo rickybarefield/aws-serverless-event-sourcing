@@ -107,12 +107,17 @@ public class DatabaseSqlExecutor {
 
             var sqlString = IOUtils.toString(resourceContainingSql, Charsets.UTF_8);
 
-            execute(logicalName, Output.of(sqlString));
+            execute(logicalName, sqlString);
 
         } catch (IOException e) {
 
             throw new RuntimeException(e);
         }
+    }
+
+    public void execute(String logicalName, String sqlString) {
+
+        execute(logicalName, Output.of(sqlString));
     }
 
     public void execute(String logicalName, Output<String> sqlString) {

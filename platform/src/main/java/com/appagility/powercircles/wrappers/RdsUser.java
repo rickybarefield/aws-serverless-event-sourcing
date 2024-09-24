@@ -55,6 +55,11 @@ public class RdsUser {
                 getUserPassword().applyValue(password -> "CREATE USER " + username + " WITH PASSWORD '" + password + "';"));
     }
 
+    public void grantAllPermissionsOnSchema(DatabaseSqlExecutor initializer, String schemaName) {
+
+        initializer.execute(nameContext + "-allow-access-to-" + schemaName, "GRANT ALL ON ALL TABLES IN SCHEMA " + schemaName + " TO " + username + ";");
+    }
+
     public Output<String> getUserPassword() {
 
         return userPassword.get().result();

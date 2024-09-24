@@ -51,16 +51,16 @@ public class Projection {
     private String schemaResourcePath;
     private Class<?> projectionHandler;
     private String projectionHandlerArtifactName;
+    private String schemaName;
 
     public void defineInfrastructureAndSubscribeToEventBus(Topic eventBus,
                                                            AwsRdsInstance projectionsInstance,
                                                            AwsNetwork awsNetwork,
                                                            List<AwsSubnet> dataSubnets) {
-
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
         defineSchema(projectionsInstance);
-        var rdsUser = projectionsInstance.createUser(name);
+        var rdsUser = projectionsInstance.createUserAndGrantAllPermissionsOnSchema(name, schemaName);
         var projectionLambda = defineProjectionHandlerLambda(projectionsInstance, rdsUser, awsNetwork, dataSubnets);
 
         connectQueueToLambda(projectionQueue, projectionLambda);

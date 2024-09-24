@@ -46,6 +46,7 @@ public class App {
                                     .projectionHandler(LambdaEventHandler.class)
                                     //FIXME This should work without qualified path as using classloader of projectionHandler
                                     .schemaResourcePath("com/appagility/powercircles/summaryprojection/infrastructure/aws/schema.sql")
+                                    .schemaName("summary")
                                     .build())
                             .build())
                     .build();

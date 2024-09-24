@@ -169,11 +169,12 @@ public class AwsRdsInstance {
         return rootUser.getUserName();
     }
 
-    public RdsUser createUser(String username) {
+    public RdsUser createUserAndGrantAllPermissionsOnSchema(String username, String schemaName) {
 
         var user = new RdsUser(username, name);
         user.defineSecret();
         user.addUserToDatabase(databaseSqlExecutor);
+        user.grantAllPermissionsOnSchema(databaseSqlExecutor, schemaName);
         return user;
     }
 

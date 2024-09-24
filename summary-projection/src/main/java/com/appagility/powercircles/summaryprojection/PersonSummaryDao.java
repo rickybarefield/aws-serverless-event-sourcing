@@ -10,7 +10,7 @@ import java.util.List;
 @AllArgsConstructor
 public class PersonSummaryDao {
 
-    public static final String TABLE_NAME = "PersonSummary";
+    public static final String TABLE_NAME = "Summary.PersonSummary";
     private final ConnectionFactory connectionFactory;
 
     public void persist(PersonSummary personSummary) throws SQLException {
