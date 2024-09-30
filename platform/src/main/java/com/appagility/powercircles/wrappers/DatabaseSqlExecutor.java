@@ -20,19 +20,21 @@ import com.pulumi.aws.lambda.InvocationArgs;
 import com.pulumi.aws.lambda.inputs.FunctionEnvironmentArgs;
 import com.pulumi.aws.lambda.inputs.FunctionVpcConfigArgs;
 import com.pulumi.core.Output;
+import com.pulumi.resources.CustomResourceOptions;
+import com.pulumi.resources.Resource;
 import lombok.Builder;
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static com.appagility.powercircles.connectionfactories.RdsPostgresSecretAuthConnectionFactory.SECRET_NAME_ENV_VARIABLE;
 
-@Builder
 public class DatabaseSqlExecutor {
 
     private static final String SQL_EXECUTOR_ARTIFACT_NAME = "aws-lambda-sql-executor.jar";
@@ -43,7 +45,20 @@ public class DatabaseSqlExecutor {
     private final List<AwsSubnet> dataSubnets;
     private final AwsRdsInstance instance;
 
+    private final List<Resource> previousExecutions = new ArrayList<>();
+
+    @Builder
+    public DatabaseSqlExecutor(AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets, AwsRdsInstance instance, Function sqlExecutor) {
+
+        this.awsNetwork = awsNetwork;
+        this.dataSubnets = dataSubnets;
+        this.instance = instance;
+        this.sqlExecutor = sqlExecutor;
+    }
+
     private Function sqlExecutor;
+
+
 
     public void defineInfrastructure() {
 
@@ -131,12 +146,15 @@ public class DatabaseSqlExecutor {
             return gson.toJson(object);
         });
 
+        var executionsPreviousToThisOne = new ArrayList<>(previousExecutions);
 
 
-        new Invocation(instance.getName() + "-" + logicalName, InvocationArgs.builder()
+        var thisExecution = new Invocation(instance.getName() + "-" + logicalName, InvocationArgs.builder()
                 .functionName(sqlExecutor.name())
                 .input(input)
-                .build()
+                .build(), CustomResourceOptions.builder().dependsOn(executionsPreviousToThisOne).build()
         );
+
+        previousExecutions.add(thisExecution);
     }
 }

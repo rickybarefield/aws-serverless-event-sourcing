@@ -14,6 +14,7 @@ import com.pulumi.core.Output;
 import com.pulumi.random.RandomPassword;
 import com.pulumi.random.RandomPasswordArgs;
 
+import java.sql.PreparedStatement;
 import java.util.Collections;
 
 public class RdsUser {
@@ -57,7 +58,16 @@ public class RdsUser {
 
     public void grantAllPermissionsOnSchema(DatabaseSqlExecutor initializer, String schemaName) {
 
-        initializer.execute(nameContext + "-allow-access-to-" + schemaName, "GRANT ALL ON ALL TABLES IN SCHEMA " + schemaName + " TO " + username + ";");
+        initializer.execute(nameContext + "-allow-access-to-" + schemaName, createGrantSql(schemaName));
+    }
+
+    //A risk of SQL injection depending on usage, given expected usage probably okay but better to use
+    //prepared statement approach, which may be difficuly without an actual SQL connection
+    private String createGrantSql(String schemaName) {
+
+        return "GRANT ALL ON ALL TABLES IN SCHEMA " + schemaName + " TO " + username + ";" +
+                " GRANT USAGE ON SCHEMA " + schemaName + " TO " + username + ";" +
+                " ALTER DEFAULT PRIVILEGES IN SCHEMA " + schemaName + " GRANT ALL ON TABLES TO " + username + ";";
     }
 
     public Output<String> getUserPassword() {
