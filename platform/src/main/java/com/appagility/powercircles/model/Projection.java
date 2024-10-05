@@ -5,8 +5,10 @@ import com.appagility.powercircles.common.IamPolicyFunctions;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.AwsSubnet;
 import com.appagility.powercircles.wrappers.AwsRdsInstance;
+import com.appagility.powercircles.wrappers.AwsRestApi;
 import com.appagility.powercircles.wrappers.JavaLambda;
 import com.appagility.powercircles.wrappers.RdsUser;
+import com.pulumi.aws.apigateway.RestApi;
 import com.pulumi.aws.ec2.SecurityGroup;
 import com.pulumi.aws.ec2.SecurityGroupArgs;
 import com.pulumi.aws.iam.IamFunctions;
@@ -31,6 +33,7 @@ import com.pulumi.aws.sqs.QueuePolicy;
 import com.pulumi.aws.sqs.QueuePolicyArgs;
 import com.pulumi.core.Output;
 import lombok.Builder;
+import lombok.Singular;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -50,20 +53,27 @@ public class Projection {
      */
     private String schemaResourcePath;
     private Class<?> projectionHandler;
+    @Singular("query")
+    private List<Query> queries;
+    private Class<?> queryHandler;
     private String projectionHandlerArtifactName;
     private String schemaName;
 
     public void defineInfrastructureAndSubscribeToEventBus(Topic eventBus,
                                                            AwsRdsInstance projectionsInstance,
                                                            AwsNetwork awsNetwork,
-                                                           List<AwsSubnet> dataSubnets) {
+                                                           List<AwsSubnet> dataSubnets, AwsRestApi restApi) {
         var projectionQueue = defineQueue();
         subscribeQueueToEventBus(projectionQueue, eventBus);
         defineSchema(projectionsInstance);
         var rdsUser = projectionsInstance.createUserAndGrantAllPermissionsOnSchema(name, schemaName);
         var projectionLambda = defineProjectionHandlerLambda(projectionsInstance, rdsUser, awsNetwork, dataSubnets);
-
         connectQueueToLambda(projectionQueue, projectionLambda);
+
+        var queryHandlerLambda = defineQueryHandlerLambda(projectionsInstance, rdsUser, awsNetwork, dataSubnets);
+
+        queries.forEach(c -> c.defineRouteAndConnectToQueryHandler(restApi, queryHandlerLambda));
+
     }
 
     private void defineSchema(AwsRdsInstance projectionsInstance) {
@@ -128,28 +138,42 @@ public class Projection {
                 .build());
     }
 
+
+    private Function defineQueryHandlerLambda(AwsRdsInstance instance, RdsUser rdsUser, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
+
+        return defineLambda(queryHandler, "query", instance, rdsUser, awsNetwork, dataSubnets);
+    }
+
+
     private Function defineProjectionHandlerLambda(AwsRdsInstance instance, RdsUser rdsUser, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
+
+        return defineLambda(projectionHandler, "projection", instance, rdsUser, awsNetwork, dataSubnets);
+    }
+
+    private Function defineLambda(Class<?> handler, String handlerType, AwsRdsInstance instance, RdsUser rdsUser, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
+
+        var nameContext = name + "-" + handlerType;
 
         var subnetIds = Output.all(dataSubnets.stream().map(AwsSubnet::getId).toList());
 
         var vpcId = dataSubnets.get(0).getVpcId();
 
-        var lambdaSecurityGroup = new SecurityGroup(name, SecurityGroupArgs.builder()
+        var lambdaSecurityGroup = new SecurityGroup(nameContext, SecurityGroupArgs.builder()
                 .vpcId(vpcId)
                 .build());
 
-        awsNetwork.allowAccessToSecretsManager(name, lambdaSecurityGroup);
+        awsNetwork.allowAccessToSecretsManager(nameContext, lambdaSecurityGroup);
 
-        instance.allowAccessFrom(name, lambdaSecurityGroup);
+        instance.allowAccessFrom(nameContext, lambdaSecurityGroup);
 
         var securityGroupIds = lambdaSecurityGroup.id().applyValue(Collections::singletonList);
 
-        var lambdaRole = defineRoleForLambda(rdsUser);
+        var lambdaRole = defineRoleForLambda(nameContext, rdsUser);
 
         return JavaLambda.builder()
-                .name(name)
+                .name(nameContext)
                 .artifactName(projectionHandlerArtifactName)
-                .handler(projectionHandler)
+                .handler(handler)
                 .role(lambdaRole)
                 .environment(instance.getConnectionDetails(rdsUser).applyValue(
                         connectionDetails -> FunctionEnvironmentArgs.builder()
@@ -164,14 +188,15 @@ public class Projection {
                         .build())
                 .build()
                 .define();
+
     }
 
-    private Role defineRoleForLambda(RdsUser user) {
+    private Role defineRoleForLambda(String nameContext, RdsUser user) {
 
         var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
-        var allowConnectToDatabasePolicy = user.createPolicyToGetSecret(name);
+        var allowConnectToDatabasePolicy = user.createPolicyToGetSecret(nameContext);
 
-        return new Role("lambda-role-" + name, new RoleArgs.Builder()
+        return new Role("lambda-role-" + nameContext, new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
                 .managedPolicyArns(allowConnectToDatabasePolicy.arn().applyValue(rdsSecretPolicy ->
                                 List.of(LambdaVpcAccessExecution.getArn(),

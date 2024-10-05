@@ -54,12 +54,14 @@ is created, the following sequence of events takes place:
 * [ ] Create one!
 * [ ] Add query handler
 * [ ] Create projection after an upgrade which uses replay functionality
+* [ ] Use OpenAPI Spec for Queries
 
 ### Command Handlers
 
 * [ ] Events should probably have a date/time on them too
 * [ ] Add Dependency injection (Dagger?) to command handlers and projection handlers
 * [ ] Create a second command and event
+* [ ] Use OpenAPI Spec
 
 ### Testing
 

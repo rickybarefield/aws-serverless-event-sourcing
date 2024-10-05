@@ -48,8 +48,7 @@ public class RoundCircleTest {
 
         var retrievedPersonSummary = retrieved.getFirst();
 
-        Assertions.assertEquals(personName, retrievedPersonSummary.getName());
-        Assertions.assertEquals(personId, retrievedPersonSummary.getPersonId());
+        Assertions.assertEquals(personName, retrievedPersonSummary.name());
+        Assertions.assertEquals(personId, retrievedPersonSummary.personId());
     }
-
 }

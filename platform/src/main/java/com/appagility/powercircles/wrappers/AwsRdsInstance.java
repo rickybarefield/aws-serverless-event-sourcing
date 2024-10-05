@@ -141,7 +141,7 @@ public class AwsRdsInstance {
 
     public Policy createPolicyToGetRootUserSecret(String resourceName) {
 
-        return rootUser.createPolicyToGetSecret(resourceName);
+        return rootUser.createPolicyToGetSecret(resourceName + "-root");
     }
 
     public Output<ConnectionDetails> getRootUserConnectionDetails() {

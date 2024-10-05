@@ -2,13 +2,11 @@ package com.appagility.powercircles;
 
 import com.appagility.powercircles.commandhandlers.infrastructure.aws.PersonHandler;
 import com.appagility.powercircles.common.ContextNamingStrategy;
-import com.appagility.powercircles.model.Aggregate;
-import com.appagility.powercircles.model.Command;
-import com.appagility.powercircles.model.EventSourcingApplication;
-import com.appagility.powercircles.model.Projection;
+import com.appagility.powercircles.model.*;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.NetworkingInputs;
 import com.appagility.powercircles.summaryprojection.infrastructure.aws.LambdaEventHandler;
+import com.appagility.powercircles.summaryprojection.infrastructure.aws.LambdaQueryHandler;
 import com.pulumi.Pulumi;
 
 public class App {
@@ -39,7 +37,7 @@ public class App {
                             .name("person")
                             .commandHandler(PersonHandler.class)
                             .commandHandlerArtifactName("power-circles-command-handlers.jar")
-                            .command(Command.builder().name("Create").build())
+                            .command(Command.builder().name("person").build())
                             .projection(Projection.builder()
                                     .name("Summary")
                                     .projectionHandlerArtifactName("power-circles-summary-projections.jar")
@@ -47,6 +45,8 @@ public class App {
                                     //FIXME This should work without qualified path as using classloader of projectionHandler
                                     .schemaResourcePath("com/appagility/powercircles/summaryprojection/infrastructure/aws/schema.sql")
                                     .schemaName("summary")
+                                    .queryHandler(LambdaQueryHandler.class)
+                                    .query(Query.builder().name("person-summary").build())
                                     .build())
                             .build())
                     .build();

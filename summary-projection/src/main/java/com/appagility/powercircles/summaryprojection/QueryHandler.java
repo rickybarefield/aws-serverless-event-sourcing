@@ -10,11 +10,11 @@ public class QueryHandler {
 
     private final PersonSummaryDao personSummaryDao;
 
-    public List<PersonSummary> getAll() {
+    public List<SummaryProjection> getAll() {
 
         try {
 
-            return personSummaryDao.loadAll();
+            return personSummaryDao.loadAll().stream().map(SummaryProjection::from).toList();
 
         } catch (SQLException e) {
 

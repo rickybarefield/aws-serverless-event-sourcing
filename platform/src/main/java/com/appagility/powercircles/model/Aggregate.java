@@ -7,10 +7,10 @@ import com.appagility.powercircles.common.IamPolicyFunctions;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.AwsSubnet;
 import com.appagility.powercircles.wrappers.AwsRdsInstance;
+import com.appagility.powercircles.wrappers.AwsRestApi;
 import com.appagility.powercircles.wrappers.JavaLambda;
 import com.pulumi.asset.AssetArchive;
 import com.pulumi.asset.StringAsset;
-import com.pulumi.aws.apigateway.RestApi;
 import com.pulumi.aws.dynamodb.Table;
 import com.pulumi.aws.dynamodb.TableArgs;
 import com.pulumi.aws.dynamodb.inputs.TableAttributeArgs;
@@ -54,11 +54,11 @@ public class Aggregate {
     private String commandHandlerArtifactName;
     private Class<?> commandHandler;
 
-    public void defineInfrastructure(RestApi restApi, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
+    public void defineInfrastructure(AwsRestApi restApi, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
 
         var eventStore = defineDynamoTable();
 
-        var commandHandler = defineLambdaForCommandHandler(eventStore, restApi);
+        var commandHandlerLambda = defineLambdaForCommandHandler(eventStore, restApi);
 
         var eventBus = defineTopicForEventBus();
 
@@ -73,8 +73,8 @@ public class Aggregate {
 
         rdsInstance.defineInfrastructure();
 
-        commands.forEach(c -> c.defineRouteAndConnectToCommandBus(restApi, commandHandler));
-        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, rdsInstance, awsNetwork, dataSubnets));
+        commands.forEach(c -> c.defineRouteAndConnectToCommandHandler(restApi, commandHandlerLambda));
+        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, rdsInstance, awsNetwork, dataSubnets, restApi));
     }
 
     private Topic defineTopicForEventBus() {
@@ -166,7 +166,7 @@ public class Aggregate {
                 .build());
     }
 
-    private Function defineLambdaForCommandHandler(Table eventStore, RestApi restApi) {
+    private Function defineLambdaForCommandHandler(Table eventStore, AwsRestApi restApi) {
 
         var lambdaRole = defineRoleForLambda(eventStore);
 
@@ -184,13 +184,6 @@ public class Aggregate {
                 .role(lambdaRole)
                 .build()
                 .define();
-
-        new Permission("allow_invoke_from_restapi", PermissionArgs.builder()
-                .action("lambda:InvokeFunction")
-                .function(function.name())
-                .principal("apigateway.amazonaws.com")
-                .sourceArn(restApi.executionArn().applyValue(arn -> arn + "/*/*"))
-                .build());
 
         return function;
     }

@@ -28,8 +28,6 @@ public class LambdaEventHandler implements RequestStreamHandler {
 
         var sqsMessage = gson.fromJson(new InputStreamReader(inputStream), JsonObject.class);
 
-        System.out.println(sqsMessage);
-
         var records = sqsMessage.get("Records").getAsJsonArray();
 
         for(JsonElement record : records) {
