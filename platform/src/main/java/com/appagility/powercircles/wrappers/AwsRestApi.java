@@ -1,5 +1,6 @@
 package com.appagility.powercircles.wrappers;
 
+import com.amazonaws.HttpMethod;
 import com.appagility.powercircles.common.MayBecome;
 import com.pulumi.aws.apigateway.*;
 import com.pulumi.aws.apigateway.inputs.RestApiEndpointConfigurationArgs;
@@ -44,7 +45,7 @@ public class AwsRestApi {
                 .build()));
     }
 
-    public void defineRouteToFunction(String path, Function handler) {
+    public void defineRouteToFunction(String path, HttpMethod httpMethod, Function handler) {
 
         String nameContext = name + "-" + path;
 
@@ -57,7 +58,7 @@ public class AwsRestApi {
         var method = new Method(nameContext, MethodArgs.builder()
                 .resourceId(resource.id())
                 .restApi(restApi.get().id())
-                .httpMethod("POST")
+                .httpMethod(httpMethod.name())
                 .authorization("NONE")
                 .build());
 
@@ -84,7 +85,6 @@ public class AwsRestApi {
                 .resourceId(resource.id())
                 .statusCode("200")
                 .httpMethod(method.httpMethod())
-//                .responseTemplates(Map.of("application/json", "{ \"dummy\": \"value\" }"))
                 .build(), CustomResourceOptions.builder().dependsOn(integration).build());
 
         allowToInvokeFunction(nameContext, handler);

@@ -5,6 +5,7 @@ import com.appagility.powercircles.domain.events.PersonCreatedEvent;
 import com.appagility.powercircles.domain.events.PersonEvent;
 import com.appagility.powercircles.domain.events.PersonEventDetail;
 import com.appagility.powercircles.domain.events.PersonEventVisitor;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,7 +13,10 @@ import java.util.List;
 
 public class Person implements PersonEventVisitor {
 
+    @Getter
     private String id;
+
+    @Getter
     private String name;
 
     private final List<PersonEvent<? extends PersonEventDetail>> events;

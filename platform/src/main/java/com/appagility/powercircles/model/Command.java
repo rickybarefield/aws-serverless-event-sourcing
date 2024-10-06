@@ -1,5 +1,6 @@
 package com.appagility.powercircles.model;
 
+import com.amazonaws.HttpMethod;
 import com.appagility.powercircles.wrappers.AwsRestApi;
 import com.pulumi.aws.apigateway.*;
 import com.pulumi.aws.lambda.Function;
@@ -22,6 +23,6 @@ public class Command {
 
     public void defineRouteAndConnectToCommandHandler(AwsRestApi restApi, Function commandHandler) {
 
-        restApi.defineRouteToFunction(name, commandHandler);
+        restApi.defineRouteToFunction(name, HttpMethod.POST, commandHandler);
     }
 }
