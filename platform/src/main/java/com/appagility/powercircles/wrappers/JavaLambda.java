@@ -1,5 +1,6 @@
 package com.appagility.powercircles.wrappers;
 
+import com.appagility.powercircles.common.NamingContext;
 import com.pulumi.asset.FileArchive;
 import com.pulumi.aws.iam.Role;
 import com.pulumi.aws.lambda.Function;
@@ -17,7 +18,7 @@ public class JavaLambda {
 
     public static final Duration LAMBDA_TIMEOUT = Duration.ofMinutes(1);
 
-    private final String name;
+    private final NamingContext namingContext;
     private final Class<?> handler;
     private final String artifactName;
     private final Role role;
@@ -40,7 +41,7 @@ public class JavaLambda {
             functionArgsBuilder.vpcConfig(vpcConfig);
         }
 
-        return new Function(name, functionArgsBuilder.build());
+        return new Function(namingContext.getName(), functionArgsBuilder.build());
     }
 
 }

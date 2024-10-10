@@ -2,6 +2,7 @@ package com.appagility.powercircles.wrappers;
 
 import com.amazonaws.HttpMethod;
 import com.appagility.powercircles.common.MayBecome;
+import com.appagility.powercircles.common.NamingContext;
 import com.pulumi.aws.apigateway.*;
 import com.pulumi.aws.apigateway.inputs.RestApiEndpointConfigurationArgs;
 import com.pulumi.aws.lambda.Function;
@@ -14,55 +15,47 @@ import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+
 
 public class AwsRestApi {
-
-    private final String name;
 
     private MayBecome<RestApi> restApi = MayBecome.empty("restApi");
 
     @Getter
     private List<Integration> integrations = new ArrayList<>();
 
-    @Builder
-    public AwsRestApi(String name) {
-
-        this.name = name;
-    }
-
     public Output<String> getId() {
 
         return restApi.get().id();
     }
 
-    public void defineInfrastructure() {
+    public void defineInfrastructure(NamingContext namingContext) {
 
-        restApi.set(new RestApi("PowerCircles", RestApiArgs.builder()
+        restApi.set(new RestApi(namingContext.getName(), RestApiArgs.builder()
                 .endpointConfiguration(RestApiEndpointConfigurationArgs.builder()
                         .types("REGIONAL")
                         .build())
                 .build()));
     }
 
-    public void defineRouteToFunction(String path, HttpMethod httpMethod, Function handler) {
+    public void defineRouteToFunction(NamingContext parentNamingContext, String path, HttpMethod httpMethod, Function handler) {
 
-        String nameContext = name + "-" + path;
+        var routeNamingContext = parentNamingContext.with(httpMethod.name()).with(path);
 
-        var resource = new Resource(nameContext, ResourceArgs.builder()
+        var resource = new Resource(routeNamingContext.getName(), ResourceArgs.builder()
                 .restApi(restApi.get().id())
                 .parentId(restApi.get().rootResourceId())
                 .pathPart(path)
                 .build());
 
-        var method = new Method(nameContext, MethodArgs.builder()
+        var method = new Method(routeNamingContext.getName(), MethodArgs.builder()
                 .resourceId(resource.id())
                 .restApi(restApi.get().id())
                 .httpMethod(httpMethod.name())
                 .authorization("NONE")
                 .build());
 
-        var integration = new Integration(nameContext, IntegrationArgs.builder()
+        var integration = new Integration(routeNamingContext.getName(), IntegrationArgs.builder()
                 .type("AWS")
                 .restApi(restApi.get().id())
                 .resourceId(resource.id())
@@ -73,26 +66,26 @@ public class AwsRestApi {
 
         integrations.add(integration);
 
-        new MethodResponse(nameContext, MethodResponseArgs.builder()
+        new MethodResponse(routeNamingContext.getName(), MethodResponseArgs.builder()
                 .restApi(restApi.get().id())
                 .resourceId(resource.id())
                 .httpMethod(method.httpMethod())
                 .statusCode("200")
                 .build());
 
-        new IntegrationResponse(nameContext, IntegrationResponseArgs.builder()
+        new IntegrationResponse(routeNamingContext.getName(), IntegrationResponseArgs.builder()
                 .restApi(restApi.get().id())
                 .resourceId(resource.id())
                 .statusCode("200")
                 .httpMethod(method.httpMethod())
                 .build(), CustomResourceOptions.builder().dependsOn(integration).build());
 
-        allowToInvokeFunction(nameContext, handler);
+        allowToInvokeFunction(routeNamingContext, handler);
     }
 
-    private void allowToInvokeFunction(String nameContext, Function function) {
+    private void allowToInvokeFunction(NamingContext namingContext, Function function) {
 
-        new Permission(nameContext + "_invoke_lambda", PermissionArgs.builder()
+        new Permission(namingContext.getName(), PermissionArgs.builder()
                 .action("lambda:InvokeFunction")
                 .function(function.name())
                 .principal("apigateway.amazonaws.com")

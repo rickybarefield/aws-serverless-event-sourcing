@@ -1,6 +1,6 @@
 package com.appagility.powercircles.networking;
 
-import com.appagility.powercircles.common.NamingStrategy;
+import com.appagility.powercircles.common.NamingContext;
 import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.*;
 import com.pulumi.aws.ec2.enums.ProtocolType;
@@ -11,7 +11,7 @@ import java.util.Collections;
 
 public class AwsVpcEndpoint {
 
-    private final NamingStrategy namingStrategy;
+    private final NamingContext namingContext;
     private final AwsNetwork awsNetwork;
     private final String service;
 
@@ -19,16 +19,16 @@ public class AwsVpcEndpoint {
 
     private SecurityGroup securityGroup;
 
-    private AwsVpcEndpoint(NamingStrategy namingStrategy, AwsNetwork awsNetwork, String service) {
+    private AwsVpcEndpoint(NamingContext parentNamingContext, AwsNetwork awsNetwork, String service) {
 
-        this.namingStrategy = namingStrategy;
+        this.namingContext = parentNamingContext.with(service);
         this.awsNetwork = awsNetwork;
         this.service = service;
     }
 
-    public static AwsVpcEndpoint define(NamingStrategy namingStrategy, AwsNetwork awsNetwork, String service) {
+    public static AwsVpcEndpoint define(NamingContext parentNamingContext, AwsNetwork awsNetwork, String service) {
 
-        var endpoint = new AwsVpcEndpoint(namingStrategy, awsNetwork, service);
+        var endpoint = new AwsVpcEndpoint(parentNamingContext, awsNetwork, service);
 
         endpoint.defineInfrastructure();
 
@@ -37,7 +37,7 @@ public class AwsVpcEndpoint {
 
     private void defineInfrastructure() {
 
-        securityGroup = new SecurityGroup(namingStrategy.generateName("endpoint", service), SecurityGroupArgs.builder()
+        securityGroup = new SecurityGroup(namingContext.getName(), SecurityGroupArgs.builder()
                 .vpcId(awsNetwork.getVpcId())
                 .build());
 
@@ -47,7 +47,7 @@ public class AwsVpcEndpoint {
 
         var subnetIds = Output.all(awsNetwork.allSubnets().map(AwsSubnet::getId).toList());
 
-        endpoint = new VpcEndpoint(namingStrategy.generateName("endpoint", service), VpcEndpointArgs.builder()
+        endpoint = new VpcEndpoint(namingContext.getName(), VpcEndpointArgs.builder()
                 .vpcEndpointType("Interface")
                 .vpcId(awsNetwork.getVpcId())
                 .serviceName(serviceName)
@@ -57,11 +57,11 @@ public class AwsVpcEndpoint {
                 .build());
     }
 
-    public void allowHttpsAccessFrom(String resource, SecurityGroup other) {
+    public void allowHttpsAccessFrom(NamingContext namingContext, SecurityGroup other) {
 
         int port = 443;
 
-        new SecurityGroupRule(namingStrategy.generateName(resource, "egress", "to", service), SecurityGroupRuleArgs.builder()
+        new SecurityGroupRule(namingContext.with("egress").with("to").with(service).getName(), SecurityGroupRuleArgs.builder()
                 .type("egress")
                 .securityGroupId(other.id())
                 .sourceSecurityGroupId(securityGroup.id())
@@ -70,7 +70,9 @@ public class AwsVpcEndpoint {
                 .fromPort(port)
                 .build());
 
-        new SecurityGroupRule(namingStrategy.generateName(service, "ingress", "from", resource), SecurityGroupRuleArgs.builder()
+        var distinctPart = namingContext.distinctName(this.namingContext);
+
+        new SecurityGroupRule(namingContext.with(service).with("ingress").with("from").with(distinctPart).getName(), SecurityGroupRuleArgs.builder()
                 .type("ingress")
                 .securityGroupId(securityGroup.id())
                 .sourceSecurityGroupId(other.id())

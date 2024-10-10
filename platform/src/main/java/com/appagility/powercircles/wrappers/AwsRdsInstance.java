@@ -1,6 +1,7 @@
 package com.appagility.powercircles.wrappers;
 
 import com.appagility.powercircles.common.MayBecome;
+import com.appagility.powercircles.common.NamingContext;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.AwsSubnet;
 import com.pulumi.aws.ec2.SecurityGroup;
@@ -27,6 +28,7 @@ public class AwsRdsInstance {
 
     @Getter
     private final String name;
+    private final String username;
 
     private MayBecome<Instance> instance = MayBecome.empty("instance");
 
@@ -38,18 +40,21 @@ public class AwsRdsInstance {
     @Builder
     public AwsRdsInstance(AwsNetwork awsNetwork, List<AwsSubnet> awsSubnets, String name, String username) {
 
-        this.rootUser = new RdsUser(name, username);
         this.awsNetwork = awsNetwork;
         this.awsSubnets = awsSubnets;
         this.name = name;
+        this.username = username;
     }
 
-    public void defineInfrastructure() {
+    public void defineInfrastructure(NamingContext parentNamingContext) {
 
-        defineSecurityGroup();
+        var namingContext = parentNamingContext.with(name);
+
+        this.rootUser = new RdsUser(namingContext, username);
+        defineSecurityGroup(namingContext);
         rootUser.defineSecret();
         defineDatabase();
-        defineSqlExecutor();
+        defineSqlExecutor(namingContext);
     }
 
     private void defineDatabase() {
@@ -85,16 +90,16 @@ public class AwsRdsInstance {
         return name + "Projections";
     }
 
-    private void defineSecurityGroup() {
+    private void defineSecurityGroup(NamingContext namingContext) {
 
         var vpcId = awsSubnets.get(0).getVpcId();
 
-        securityGroup.set(new SecurityGroup(name + "-projections", SecurityGroupArgs.builder()
+        securityGroup.set(new SecurityGroup(namingContext.getName(), SecurityGroupArgs.builder()
                 .vpcId(vpcId)
                 .build()));
     }
 
-    private void defineSqlExecutor() {
+    private void defineSqlExecutor(NamingContext namingContext) {
 
         databaseSqlExecutor = DatabaseSqlExecutor.builder()
                 .instance(this)
@@ -102,7 +107,7 @@ public class AwsRdsInstance {
                 .dataSubnets(awsSubnets)
                 .build();
 
-        databaseSqlExecutor.defineInfrastructure();
+        databaseSqlExecutor.defineInfrastructure(namingContext);
     }
 
     public Output<String> getAddress() {
@@ -115,9 +120,9 @@ public class AwsRdsInstance {
         return instance.get().port();
     }
 
-    public void allowAccessFrom(String resourceName, SecurityGroup otherSecurityGroup) {
+    public void allowAccessFrom(NamingContext namingContext, SecurityGroup otherSecurityGroup) {
 
-        new SecurityGroupRule(resourceName + "-to-" + name + "-egress", SecurityGroupRuleArgs.builder()
+        new SecurityGroupRule(namingContext.with("to").with(name).getName(), SecurityGroupRuleArgs.builder()
                 .fromPort(getPort())
                 .toPort(getPort())
                 .protocol("tcp")
@@ -127,7 +132,7 @@ public class AwsRdsInstance {
                 .build()
         );
 
-        new SecurityGroupRule(name + "-from-" + resourceName + "-ingress", SecurityGroupRuleArgs.builder()
+        new SecurityGroupRule(namingContext.with("from").with(name).getName(), SecurityGroupRuleArgs.builder()
                 .fromPort(getPort())
                 .toPort(getPort())
                 .protocol("tcp")
@@ -139,9 +144,9 @@ public class AwsRdsInstance {
 
     }
 
-    public Policy createPolicyToGetRootUserSecret(String resourceName) {
+    public Policy createPolicyToGetRootUserSecret(NamingContext namingContext) {
 
-        return rootUser.createPolicyToGetSecret(resourceName + "-root");
+        return rootUser.createPolicyToGetSecret(namingContext.with("root"));
     }
 
     public Output<ConnectionDetails> getRootUserConnectionDetails() {
@@ -154,9 +159,9 @@ public class AwsRdsInstance {
         return ConnectionDetails.create(this, rdsUser);
     }
 
-    public void exectuteAsSql(String logicalName, InputStream resourceContainingSql) {
+    public void executeAsSql(NamingContext namingContext, InputStream resourceContainingSql) {
 
-        databaseSqlExecutor.execute(logicalName, resourceContainingSql);
+        databaseSqlExecutor.execute(namingContext, resourceContainingSql);
     }
 
     public Output<String> getResourceId() {
@@ -169,9 +174,9 @@ public class AwsRdsInstance {
         return rootUser.getUserName();
     }
 
-    public RdsUser createUserAndGrantAllPermissionsOnSchema(String username, String schemaName) {
+    public RdsUser createUserAndGrantAllPermissionsOnSchema(NamingContext namingContext, String username, String schemaName) {
 
-        var user = new RdsUser(username, name);
+        var user = new RdsUser(namingContext, username);
         user.defineSecret();
         user.addUserToDatabase(databaseSqlExecutor);
         user.grantAllPermissionsOnSchema(databaseSqlExecutor, schemaName);

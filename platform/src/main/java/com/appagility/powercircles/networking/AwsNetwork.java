@@ -1,7 +1,7 @@
 package com.appagility.powercircles.networking;
 
 import com.appagility.powercircles.common.MayBecome;
-import com.appagility.powercircles.common.NamingStrategy;
+import com.appagility.powercircles.common.NamingContext;
 import com.google.common.collect.Streams;
 import com.pulumi.aws.AwsFunctions;
 import com.pulumi.aws.ec2.SecurityGroup;
@@ -19,9 +19,7 @@ import java.util.stream.Stream;
 
 public class AwsNetwork {
 
-    private final String name;
-
-    private final NamingStrategy namingStrategy;
+    private final NamingContext namingStrategy;
 
     private final IPAddress range;
 
@@ -30,10 +28,9 @@ public class AwsNetwork {
 
     private final MayBecome<AwsVpcEndpoint> secretsManagerEndpoint = MayBecome.empty("secretsManagerEndpoint");
 
-    public AwsNetwork(NamingStrategy namingStrategy, String name, IPAddress range, Map<String, List<AwsSubnet>> subnetsByTier) {
+    public AwsNetwork(NamingContext namingContext, IPAddress range, Map<String, List<AwsSubnet>> subnetsByTier) {
 
-        this.namingStrategy = namingStrategy;
-        this.name = name;
+        this.namingStrategy = namingContext;
         this.range = range;
         this.subnetsByTier = subnetsByTier;
     }
@@ -50,7 +47,7 @@ public class AwsNetwork {
 
     public void defineInfrastructure() {
 
-        vpc = new Vpc(namingStrategy.generateName(name), VpcArgs.builder()
+        vpc = new Vpc(namingStrategy.getName(), VpcArgs.builder()
                 .cidrBlock(range.toString())
                 .enableDnsHostnames(true)
                 .enableDnsSupport(true)
@@ -72,8 +69,7 @@ public class AwsNetwork {
 
     public static class AwsNetworkBuilder {
 
-        private NamingStrategy namingStrategy;
-        private String name;
+        private NamingContext namingContext;
         private List<String> tierNames;
 
         private IPAddress networkRange;
@@ -81,16 +77,9 @@ public class AwsNetwork {
         private AwsNetworkBuilder() {
         }
 
-        public AwsNetworkBuilder namingStrategy(NamingStrategy namingStrategy) {
+        public AwsNetworkBuilder namingContext(NamingContext namingContext) {
 
-            this.namingStrategy = namingStrategy;
-
-            return this;
-        }
-
-        public AwsNetworkBuilder name(String name) {
-
-            this.name = name;
+            this.namingContext = namingContext;
 
             return this;
         }
@@ -126,19 +115,19 @@ public class AwsNetwork {
 
             var subnets = Streams.zip(
                     tierNamesWithAvailabilityZone, subnetRanges.stream(),
-                    (tierAndAz, subnetRange) -> new AwsSubnet(namingStrategy, tierAndAz.t1, subnetRange, tierAndAz.t2)).toList();
+                    (tierAndAz, subnetRange) -> new AwsSubnet(namingContext, tierAndAz.t1, subnetRange, tierAndAz.t2)).toList();
 
             Map<String, List<AwsSubnet>> subnetsByTierName = subnets.stream().collect(Collectors.groupingBy(AwsSubnet::getTierName));
 
-            return new AwsNetwork(namingStrategy, name, networkRange, subnetsByTierName);
+            return new AwsNetwork(namingContext, networkRange, subnetsByTierName);
         }
     }
 
-    public void allowAccessToSecretsManager(String forResource, SecurityGroup from) {
+    public void allowAccessToSecretsManager(NamingContext namingContext, SecurityGroup from) {
 
         defineSecretsManagerEndpointIfNotDefined();
 
-        secretsManagerEndpoint.get().allowHttpsAccessFrom(forResource, from);
+        secretsManagerEndpoint.get().allowHttpsAccessFrom(namingContext, from);
     }
 
     private void defineSecretsManagerEndpointIfNotDefined() {

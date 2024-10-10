@@ -4,6 +4,7 @@ import com.amazonaws.auth.policy.Statement;
 import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.StreamViewType;
 import com.appagility.powercircles.common.IamPolicyFunctions;
+import com.appagility.powercircles.common.NamingContext;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.AwsSubnet;
 import com.appagility.powercircles.wrappers.AwsRdsInstance;
@@ -54,15 +55,17 @@ public class Aggregate {
     private String commandHandlerArtifactName;
     private Class<?> commandHandler;
 
-    public void defineInfrastructure(AwsRestApi restApi, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
+    public void defineInfrastructure(NamingContext parentNamingContext, AwsRestApi restApi, AwsNetwork awsNetwork, List<AwsSubnet> dataSubnets) {
 
-        var eventStore = defineDynamoTable();
+        var namingContext = parentNamingContext.with(name);
 
-        var commandHandlerLambda = defineLambdaForCommandHandler(eventStore, restApi);
+        var eventStore = defineDynamoTable(namingContext);
 
-        var eventBus = defineTopicForEventBus();
+        var commandHandlerLambda = defineLambdaForCommandHandler(namingContext, eventStore);
 
-        defineStreamFromEventStoreToEventBus(eventStore, eventBus);
+        var eventBus = defineTopicForEventBus(namingContext);
+
+        defineStreamFromEventStoreToEventBus(namingContext, eventStore, eventBus);
 
         var rdsInstance = AwsRdsInstance.builder()
                 .awsNetwork(awsNetwork)
@@ -71,21 +74,20 @@ public class Aggregate {
                 .username(PROJECTION_DATABASE_USERNAME)
                 .build();
 
-        rdsInstance.defineInfrastructure();
+        rdsInstance.defineInfrastructure(namingContext);
 
-        commands.forEach(c -> c.defineRouteAndConnectToCommandHandler(restApi, commandHandlerLambda));
-        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(eventBus, rdsInstance, awsNetwork, dataSubnets, restApi));
+        commands.forEach(c -> c.defineRouteAndConnectToCommandHandler(namingContext, restApi, commandHandlerLambda));
+        projections.forEach(p -> p.defineInfrastructureAndSubscribeToEventBus(namingContext, eventBus, rdsInstance, awsNetwork, dataSubnets, restApi));
     }
 
-    private Topic defineTopicForEventBus() {
+    private Topic defineTopicForEventBus(NamingContext namingContext) {
 
-        return new Topic(name + "-events", TopicArgs.builder()
+        return new Topic(namingContext.with("events").getName(), TopicArgs.builder()
                 .fifoTopic(true)
                 .build());
     }
 
-    private void defineStreamFromEventStoreToEventBus(Table eventStore, Topic eventBus) {
-
+    private void defineStreamFromEventStoreToEventBus(NamingContext namingContext, Table eventStore, Topic eventBus) {
 
         var allowWriteToSnsTopic = IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
                 .statements(eventBus.arn().applyValue(eventBusArn -> Collections.singletonList(GetPolicyDocumentStatementArgs.builder()
@@ -111,18 +113,16 @@ public class Aggregate {
 
         var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
 
-        var role = new Role("forwarder-lambda-role", new RoleArgs.Builder()
+        var role = new Role(namingContext.with("forwarder-role").getName(), new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
                 .managedPolicyArns(Output.all(allowWriteToSnsForLambdaPolicy.arn(), allowReadFromStreamPolicy.arn()).applyValue(policyArns -> List.of(
                         "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
                         policyArns.get(0), policyArns.get(1))))
                 .build());
 
-        readForwarderLambdaCode();
-
         var code = readForwarderLambdaCode();
 
-        var function = new Function(name + "-forwarder-for-events", FunctionArgs
+        var function = new Function(namingContext.with("-event-forwarder").getName(), FunctionArgs
                 .builder()
                 .runtime(Runtime.NodeJS20dX)
                 .handler("index.handler")
@@ -134,7 +134,7 @@ public class Aggregate {
                                 .variables(Map.of("TARGET_TOPIC_ARN", eventBusArn)).build()))
                 .build());
 
-        new EventSourceMapping(name, EventSourceMappingArgs.builder()
+        new EventSourceMapping(namingContext.with("events").getName(), EventSourceMappingArgs.builder()
                 .eventSourceArn(eventStore.streamArn())
                 .functionName(function.name())
                 .startingPosition("LATEST")
@@ -150,10 +150,9 @@ public class Aggregate {
         }
     }
 
+    private Table defineDynamoTable(NamingContext namingContext) {
 
-    private Table defineDynamoTable() {
-
-        return new Table(name, new TableArgs.Builder()
+        return new Table(namingContext.getName(), new TableArgs.Builder()
                 .attributes(
                         new TableAttributeArgs.Builder().name("id").type("S").build(),
                         new TableAttributeArgs.Builder().name("sequenceNumber").type("N").build()
@@ -166,18 +165,17 @@ public class Aggregate {
                 .build());
     }
 
-    private Function defineLambdaForCommandHandler(Table eventStore, AwsRestApi restApi) {
+    private Function defineLambdaForCommandHandler(NamingContext namingContext, Table eventStore) {
 
-        var lambdaRole = defineRoleForLambda(eventStore);
+        var lambdaRole = defineRoleForLambda(namingContext, eventStore);
 
-
+        //TODO PERSON_TABLE_NAME cannot be hardcoded
         var environment = eventStore.name().applyValue(
                 tableName -> FunctionEnvironmentArgs.builder()
                         .variables(Map.of("PERSON_TABLE_NAME", tableName)).build());
 
-
         var function = JavaLambda.builder()
-                .name(name)
+                .namingContext(namingContext.with("command"))
                 .artifactName(commandHandlerArtifactName)
                 .handler(commandHandler)
                 .environment(environment)
@@ -188,7 +186,7 @@ public class Aggregate {
         return function;
     }
 
-    private static Role defineRoleForLambda(Table table) {
+    private static Role defineRoleForLambda(NamingContext namingContext, Table table) {
 
         var allowAllOnDynamoForTablePolicyDocument = IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
                 .statements(table.arn().applyValue(tableArn -> Collections.singletonList(GetPolicyDocumentStatementArgs.builder()
@@ -203,12 +201,11 @@ public class Aggregate {
 
         var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
 
-        return new Role("lambda-role", new RoleArgs.Builder()
+        return new Role(namingContext.getName(), new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
                 .managedPolicyArns(allowAllOnDynamoForTablePolicy.arn().applyValue(dynamoArn -> List.of(
                         "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
                         dynamoArn)))
                 .build());
     }
-
 }

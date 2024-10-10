@@ -3,6 +3,7 @@ package com.appagility.powercircles.wrappers;
 import com.amazonaws.auth.policy.Statement;
 import com.appagility.powercircles.common.IamPolicyFunctions;
 import com.appagility.powercircles.common.MayBecome;
+import com.appagility.powercircles.common.NamingContext;
 import com.pulumi.aws.iam.IamFunctions;
 import com.pulumi.aws.iam.Policy;
 import com.pulumi.aws.iam.inputs.GetPolicyDocumentArgs;
@@ -14,28 +15,27 @@ import com.pulumi.core.Output;
 import com.pulumi.random.RandomPassword;
 import com.pulumi.random.RandomPasswordArgs;
 
-import java.sql.PreparedStatement;
 import java.util.Collections;
 
 public class RdsUser {
 
-    private final String nameContext;
+    private final NamingContext namingContext;
     private final String username;
 
     private MayBecome<Secret> userPasswordSecret = MayBecome.empty("userPasswordSecret");
     private MayBecome<RandomPassword> userPassword = MayBecome.empty("userPassword");
 
-    public RdsUser(String nameContext, String username) {
+    public RdsUser(NamingContext parentNamingContext, String username) {
 
-        this.nameContext = nameContext;
+        this.namingContext = parentNamingContext.with(username);
         this.username = username;
     }
 
     public void defineSecret() {
 
-        userPasswordSecret.set(new Secret(nameContext + "-projections-secret"));
+        userPasswordSecret.set(new Secret(namingContext.getName()));
 
-        userPassword.set(new RandomPassword(nameContext + "-projections-user-password", RandomPasswordArgs.builder()
+        userPassword.set(new RandomPassword(namingContext.getName(), RandomPasswordArgs.builder()
                 .length(32)
                 .lower(true)
                 .upper(true)
@@ -44,7 +44,7 @@ public class RdsUser {
                 .minSpecial(3)
                 .build()));
 
-        new SecretVersion(nameContext + "-projections-secret-version", SecretVersionArgs.builder()
+        new SecretVersion(namingContext.getName(), SecretVersionArgs.builder()
                 .secretId(userPasswordSecret.get().id())
                 .secretString(userPassword.get().result())
                 .build());
@@ -52,13 +52,13 @@ public class RdsUser {
 
     public void addUserToDatabase(DatabaseSqlExecutor initializer) {
 
-        initializer.execute(nameContext + "-add-" + username,
+        initializer.execute(namingContext.with("add"),
                 getUserPassword().applyValue(password -> "CREATE USER " + username + " WITH PASSWORD '" + password + "';"));
     }
 
     public void grantAllPermissionsOnSchema(DatabaseSqlExecutor initializer, String schemaName) {
 
-        initializer.execute(nameContext + "-allow-access-to-" + schemaName, createGrantSql(schemaName));
+        initializer.execute(namingContext.with("access").with(schemaName), createGrantSql(schemaName));
     }
 
     //A risk of SQL injection depending on usage, given expected usage probably okay but better to use
@@ -86,7 +86,7 @@ public class RdsUser {
         return userPasswordSecret.get();
     }
 
-    public Policy createPolicyToGetSecret(String resourceName) {
+    public Policy createPolicyToGetSecret(NamingContext namingContext) {
 
         var allowGetSecret = IamFunctions.getPolicyDocument(GetPolicyDocumentArgs.builder()
                 .statements(GetPolicyDocumentStatementArgs.builder()
@@ -105,7 +105,6 @@ public class RdsUser {
                 .build());
 
         return IamPolicyFunctions.policyForDocument(allowGetSecret,
-                resourceName + "-get-db-secret-" + username);
-
+                namingContext.with("get_secret").with(username).getName());
     }
 }

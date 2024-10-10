@@ -3,6 +3,7 @@ package com.appagility.powercircles.wrappers;
 import com.appagility.aws.lambda.SqlExecutor;
 import com.appagility.powercircles.common.IamPolicyFunctions;
 import com.appagility.powercircles.common.ManagedPolicies;
+import com.appagility.powercircles.common.NamingContext;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.AwsSubnet;
 import com.google.common.base.Charsets;
@@ -60,13 +61,13 @@ public class DatabaseSqlExecutor {
 
 
 
-    public void defineInfrastructure() {
+    public void defineInfrastructure(NamingContext namingContext) {
 
-        Role role = defineRoleForLambda();
-        defineLambdaForExecutingSql(role);
+        Role role = defineRoleForLambda(namingContext);
+        defineLambdaForExecutingSql(namingContext, role);
     }
 
-    private void defineLambdaForExecutingSql(Role lambdaRole) {
+    private void defineLambdaForExecutingSql(NamingContext namingContext, Role lambdaRole) {
 
         var subnetIds = Output.all(dataSubnets.stream().map(AwsSubnet::getId).toList());
 
@@ -76,14 +77,14 @@ public class DatabaseSqlExecutor {
                 .vpcId(vpcId)
                 .build());
 
-        awsNetwork.allowAccessToSecretsManager(RESOURCE_NAME, lambdaSecurityGroup);
+        awsNetwork.allowAccessToSecretsManager(namingContext, lambdaSecurityGroup);
 
-        instance.allowAccessFrom(RESOURCE_NAME, lambdaSecurityGroup);
+        instance.allowAccessFrom(namingContext, lambdaSecurityGroup);
 
         var securityGroupIds = lambdaSecurityGroup.id().applyValue(Collections::singletonList);
 
         sqlExecutor = JavaLambda.builder()
-                .name(instance.getName() + "-" + RESOURCE_NAME)
+                .namingContext(namingContext)
                 .handler(SqlExecutor.class)
                 .artifactName(SQL_EXECUTOR_ARTIFACT_NAME)
                 .role(lambdaRole)
@@ -102,13 +103,14 @@ public class DatabaseSqlExecutor {
                 .define();
     }
 
-    private Role defineRoleForLambda() {
+    private Role defineRoleForLambda(NamingContext namingContext) {
 
-        var allowConnectToDatabasePolicy = instance.createPolicyToGetRootUserSecret(RESOURCE_NAME);
+        var allowConnectToDatabasePolicy = instance.createPolicyToGetRootUserSecret(namingContext);
 
         var assumeLambdaRole = IamPolicyFunctions.createAssumeRolePolicyDocument("lambda.amazonaws.com");
 
-        return new Role("initializer-lambda-role-" + instance.getName(), new RoleArgs.Builder()
+        return new Role(namingContext.with("initializer").with("for")
+                .with(instance.getName()).getName(), new RoleArgs.Builder()
                 .assumeRolePolicy(assumeLambdaRole.applyValue(GetPolicyDocumentResult::json))
                 .managedPolicyArns(allowConnectToDatabasePolicy.arn().applyValue(rdsPolicyArn -> List.of(
                         ManagedPolicies.LambdaVpcAccessExecution.getArn(),
@@ -116,13 +118,13 @@ public class DatabaseSqlExecutor {
                 .build());
     }
 
-    public void execute(String logicalName, InputStream resourceContainingSql) {
+    public void execute(NamingContext namingContext, InputStream resourceContainingSql) {
 
         try {
 
             var sqlString = IOUtils.toString(resourceContainingSql, Charsets.UTF_8);
 
-            execute(logicalName, sqlString);
+            execute(namingContext, sqlString);
 
         } catch (IOException e) {
 
@@ -130,12 +132,12 @@ public class DatabaseSqlExecutor {
         }
     }
 
-    public void execute(String logicalName, String sqlString) {
+    public void execute(NamingContext namingContext, String sqlString) {
 
-        execute(logicalName, Output.of(sqlString));
+        execute(namingContext, Output.of(sqlString));
     }
 
-    public void execute(String logicalName, Output<String> sqlString) {
+    public void execute(NamingContext namingContext, Output<String> sqlString) {
 
 
         var input = sqlString.applyValue(s ->  {
@@ -149,7 +151,7 @@ public class DatabaseSqlExecutor {
         var executionsPreviousToThisOne = new ArrayList<>(previousExecutions);
 
 
-        var thisExecution = new Invocation(instance.getName() + "-" + logicalName, InvocationArgs.builder()
+        var thisExecution = new Invocation(namingContext.getName(), InvocationArgs.builder()
                 .functionName(sqlExecutor.name())
                 .input(input)
                 .build(), CustomResourceOptions.builder().dependsOn(executionsPreviousToThisOne).build()

@@ -1,7 +1,7 @@
 package com.appagility.powercircles;
 
 import com.appagility.powercircles.commandhandlers.infrastructure.aws.PersonHandler;
-import com.appagility.powercircles.common.ContextNamingStrategy;
+import com.appagility.powercircles.common.NamingContext;
 import com.appagility.powercircles.model.*;
 import com.appagility.powercircles.networking.AwsNetwork;
 import com.appagility.powercircles.networking.NetworkingInputs;
@@ -14,13 +14,12 @@ public class App {
 
         Pulumi.run(ctx -> {
 
-            var contextNamingStrategy = new ContextNamingStrategy(ctx);
+            var namingContext = new NamingContext("pc");
 
             var inputs = NetworkingInputs.deserialize(ctx);
             var network =
                     AwsNetwork.builder()
-                            .namingStrategy(contextNamingStrategy)
-                            .name("main")
+                            .namingContext(namingContext)
                             .tierNames("data")
                             .networkRange(inputs.getNetworkCidrRange())
                             .buildWithEvenlySplitSubnetsAcrossAllAvailabilityZones();
@@ -30,7 +29,7 @@ public class App {
             var dataSubnets = network.getSubnets("data");
 
             var application = EventSourcingApplication.builder()
-                    .name("PowerCircles")
+                    .namingContext(namingContext)
                     .awsNetwork(network)
                     .dataSubnets(dataSubnets)
                     .aggregate(Aggregate.builder()
